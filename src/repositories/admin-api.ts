@@ -1,0 +1,148 @@
+import { request } from "@/lib/client";
+import { assertArray, assertPaged } from "@/lib/contracts.mjs";
+import type {
+  Application,
+  ApplicationDetail,
+  BankAccount,
+  BankApproval,
+  Campaign,
+  DirectoryUser,
+  MoneyRecord,
+  Paged,
+  Style,
+  NotificationRequest,
+  RejectionRequest,
+  FinancialRequest,
+} from "@/lib/types";
+const params = (values: Record<string, string | number>) =>
+  new URLSearchParams(
+    Object.entries(values).map(([key, value]) => [key, String(value)]),
+  ).toString();
+async function list<T>(
+  path: string,
+  fields: string[],
+  signal: AbortSignal,
+): Promise<T[]> {
+  return assertArray(
+    await request<unknown>(path, "GET", undefined, signal),
+    fields,
+  ) as T[];
+}
+async function paged<T>(
+  path: string,
+  fields: string[],
+  signal: AbortSignal,
+): Promise<Paged<T>> {
+  return assertPaged(
+    await request<unknown>(path, "GET", undefined, signal),
+    fields,
+  ) as Paged<T>;
+}
+export const adminApi = {
+  applications: (
+    status: string,
+    page: number,
+    pageSize: number,
+    signal: AbortSignal,
+  ) =>
+    list<Application>(
+      `admin/mua-applications?${params({ status, page, pageSize })}`,
+      ["muaId", "verificationStatus", "fullName"],
+      signal,
+    ),
+  async mua(id: string, signal: AbortSignal) {
+    const value = await request<ApplicationDetail>(
+      `admin/muas/${id}`,
+      "GET",
+      undefined,
+      signal,
+    );
+    if (
+      !value?.profile ||
+      !value.verificationDocuments ||
+      !value.eligibility ||
+      !Array.isArray(value.eligibility.requirements)
+    )
+      throw new Error("Dữ liệu hồ sơ Backend không hợp lệ.");
+    return value;
+  },
+  approveMua: (id: string) =>
+    request(`admin/mua-applications/${id}/approve`, "POST"),
+  rejectMua: (id: string, body: RejectionRequest) =>
+    request(`admin/mua-applications/${id}/reject`, "POST", body),
+  suspendMua: (id: string, suspended: boolean) =>
+    request<void>(`admin/muas/${id}/suspension`, "PATCH", { suspended }),
+  activeUser: (id: string, isActive: boolean) =>
+    request<void>(`admin/users/${id}/active`, "PATCH", { isActive }),
+  banks: (signal: AbortSignal) =>
+    list<BankAccount>(
+      "admin/bank-accounts/pending",
+      ["id", "ownerId", "accountNumber"],
+      signal,
+    ),
+  approveBank: (id: string) =>
+    request<BankApproval>(`admin/bank-accounts/${id}/approve`, "POST"),
+  rejectBank: (id: string) =>
+    request<void>(`admin/bank-accounts/${id}/reject`, "POST"),
+  moneyList: (refund: boolean, status: string, signal: AbortSignal) =>
+    list<MoneyRecord>(
+      refund
+        ? `Refund${status ? `?${params({ status })}` : ""}`
+        : "admin/payouts",
+      [refund ? "refundId" : "id", "amount", "status", "createdAt"],
+      signal,
+    ),
+  async money(id: string, refund: boolean, signal: AbortSignal) {
+    const value = await request<MoneyRecord>(
+      `${refund ? "Refund" : "admin/payouts"}/${id}`,
+      "GET",
+      undefined,
+      signal,
+    );
+    assertArray([value], [refund ? "refundId" : "id", "amount", "status"]);
+    return value;
+  },
+  financialAction: (
+    id: string,
+    refund: boolean,
+    action: string,
+    body: FinancialRequest,
+  ) =>
+    request(
+      `${refund ? "Refund" : "admin/payouts"}/${id}/${action}`,
+      "POST",
+      body,
+    ),
+  campaigns: (page: number, signal: AbortSignal) =>
+    paged<Campaign>(
+      `admin/notifications?${params({ page, pageSize: 20 })}`,
+      ["id", "title", "audience", "recipientCount"],
+      signal,
+    ),
+  recipients: (
+    search: string,
+    role: string,
+    page: number,
+    pageSize: number,
+    signal: AbortSignal,
+  ) =>
+    paged<DirectoryUser>(
+      `admin/notifications/users?${params({ search, role, page, pageSize })}`,
+      ["userId", "fullName", "email", "role"],
+      signal,
+    ),
+  notify: (body: NotificationRequest) =>
+    request<Campaign>("admin/notifications", "POST", body),
+  styles: (signal: AbortSignal) =>
+    list<Style>("Mua/styles", ["styleId", "name", "isActive"], signal),
+  createStyle: (name: string, description: string) =>
+    request<Style>("Mua/styles", "POST", {
+      name,
+      description: description || null,
+    }),
+  autoComplete: () =>
+    request<{ completedBookings: number }>(
+      "Booking/auto-complete-overdue",
+      "POST",
+    ),
+};
