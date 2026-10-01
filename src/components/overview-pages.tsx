@@ -21,6 +21,7 @@ import { date, money, shortId, waitHours, statusName } from "@/lib/format";
 import type { MoneyRecord } from "@/lib/types";
 import type { PageProps } from "./admin-app";
 import { Badge, PageTitle, Pagination, State } from "./ui";
+import { DashboardAnalytics } from "./dashboard-analytics";
 export function Dashboard({ base }: PageProps) {
   const applications = useResource(service.applications("PendingReview", 1, 5)),
     banks = useResource(service.banks()),
@@ -82,7 +83,7 @@ export function Dashboard({ base }: PageProps) {
     <>
       <PageTitle
         title="Tổng quan"
-        description="Số liệu từ các hàng đợi Backend trả về; không phải thống kê toàn hệ thống"
+        description="Thống kê kinh doanh, người dùng và công việc cần xử lý"
         action={
           <button className="button secondary" onClick={reload}>
             <RefreshCw size={15} />
@@ -90,6 +91,8 @@ export function Dashboard({ base }: PageProps) {
           </button>
         }
       />
+      <DashboardAnalytics />
+      <h2>Vận hành</h2>
       <div className="kpi-grid">
         {cards.map((card) => (
           <Link

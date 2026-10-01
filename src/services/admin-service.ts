@@ -21,6 +21,10 @@ async function mutate<T>(action: () => Promise<T>, prefixes: string[]) {
   }
 }
 export const adminService = {
+  dashboard: (from: string, to: string) =>
+    query(`admin:dashboard:${from}:${to}`, (signal) =>
+      api.dashboard(from, to, signal),
+    ),
   applications: (status: string, page = 1, size = 20) =>
     query(`admin:applications:${status}:${page}:${size}`, (signal) =>
       api.applications(status, page, size, signal),
