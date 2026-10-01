@@ -1,6 +1,11 @@
 const guid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules = [
+  ["GET", /^admin\/dashboard$/],
+  ["GET", /^admin\/complaints$/],
+  ["GET", new RegExp(`^complaints/${guid}$`)],
+  ["POST", new RegExp(`^complaints/${guid}/messages$`)],
+  ["POST", new RegExp(`^admin/complaints/${guid}/actions$`)],
   ["GET", /^admin\/mua-applications$/],
   ["GET", new RegExp(`^admin/muas/${guid}$`)],
   ["POST", new RegExp(`^admin/mua-applications/${guid}/(approve|reject)$`)],

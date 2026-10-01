@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageCircleWarning,
   Search,
   Settings,
   ShieldCheck,
@@ -27,6 +28,7 @@ import { useSubmission } from "@/lib/client";
 import type { AdminUser } from "@/lib/types";
 import { Dashboard, Applications } from "./overview-pages";
 import { VerificationDetail } from "./verification-detail";
+import { Complaints } from "./complaint-pages";
 import { BankAccounts, MoneyList, MoneyDetail } from "./finance-pages";
 import {
   Notifications,
@@ -46,6 +48,7 @@ const groups = [
       { key: "users", label: "Người dùng", icon: Users },
       { key: "muas", label: "Makeup Artist", icon: Sparkles },
       { key: "bookings", label: "Booking", icon: CalendarDays },
+      { key: "complaints", label: "Khiếu nại", icon: MessageCircleWarning },
     ],
   },
   {
@@ -131,6 +134,7 @@ export function AdminApp({
   else if (key === "styles") page = <Styles />;
   else if (key === "users") page = <Directory />;
   else if (key === "bookings") page = <Bookings {...props} id={id} />;
+  else if (key === "complaints") page = <Complaints {...props} id={id} />;
   else if (key === "activity" || key === "settings")
     page = <PlannedPage kind={key} />;
   else

@@ -28,7 +28,7 @@ See [initial audit](audit/PHASE-0.md) and [full implementation report](audit/REP
 - Users: notification-recipient directory only (active Customer/MUA), real lock action; no all/locked-user list or safe unlock lookup.
 - Booking: no Admin-wide list/detail/evidence. Dispute unavailable; existing overdue maintenance has an explicit confirmation.
 - Styles: active list/create only; no fake update/delete/activation.
-- Dashboard: no MUA total/24h count from first page; exact counts only for complete returned queues, no lifetime analytics.
+- Dashboard: Admin-only `GET /api/admin/dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD` provides database aggregates, equal-length previous-period comparisons and daily charts (Vietnam calendar dates, up to 366 days). Revenue is the stored platform fee of currently Completed/AutoCompleted bookings by CompletedAt, before accounting adjustments. Booking value, deposit collection and completed refunds are separate. User totals exclude Admin/deleted accounts and reflect the current directory; new registrations exclude accounts subsequently deleted. Operational cards still reflect returned queues. Deploy the updated Backend before the updated admin web; no database migration or mobile API change is required.
 - Independent identity approval, supplement requests, internal-note/checklist persistence, review/document-version history, private document retrieval, OCR and face match require Backend support. The UI does not fabricate these.
 - Wallet/deposit exists but returns 410 Gone; it remains unavailable.
 
@@ -42,4 +42,4 @@ npm run build
 
 Tests cover actual enum mappings, eligible financial action presentation, duplicate submission lock, malformed versus empty responses, permissions, sensitive-error sanitization, proxy allowlist and Origin policy. Runtime auth smoke tests use no credentials or business mutations. Authenticated module/mutation end-to-end tests still require a real Admin test session; this task does not claim they were exercised.
 
-Backend files modified: NONE. Existing Customer/MUA files modified: NONE (SHA-256 baseline comparison recorded in audit/unchanged-check.json).
+The original admin implementation left Backend and Customer/MUA files unchanged (see its historical SHA-256 baseline in audit/unchanged-check.json). The dashboard extension adds an Admin-only controller and date-range utility/tests to Backend. Customer/MUA mobile sources and existing API contracts remain unchanged.

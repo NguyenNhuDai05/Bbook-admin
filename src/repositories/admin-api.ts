@@ -1,4 +1,5 @@
 import { request } from "@/lib/client";
+import { validateDashboard, type DashboardData } from "@/lib/dashboard";
 import { assertArray, assertPaged } from "@/lib/contracts.mjs";
 import type {
   Application,
@@ -39,6 +40,15 @@ async function paged<T>(
   ) as Paged<T>;
 }
 export const adminApi = {
+  dashboard: async (from: string, to: string, signal: AbortSignal) =>
+    validateDashboard(
+      await request<DashboardData>(
+        `admin/dashboard?${params({ from, to })}`,
+        "GET",
+        undefined,
+        signal,
+      ),
+    ),
   applications: (
     status: string,
     page: number,
