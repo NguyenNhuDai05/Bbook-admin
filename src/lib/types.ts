@@ -69,8 +69,26 @@ export interface ApplicationDetail {
     canReceiveBookings: boolean;
   };
 }
+export interface BankReviewRequest {
+  reviewToken: string;
+  reason?: string;
+  note?: string;
+}
+export interface FinancialQr {
+  payoutId?: string;
+  refundId?: string;
+  accountId?: string;
+  amount?: number;
+  imageDataUrl: string;
+  kind?: string;
+  containsPayoutAmount?: boolean;
+  containsRefundAmount?: boolean;
+}
 export interface BankAccount {
   id: string;
+  reviewToken: string;
+  hasFinancialQr: boolean;
+  verificationStatus: string;
   ownerId: string;
   ownerName?: string | null;
   bankCode: string;
