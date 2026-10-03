@@ -6,6 +6,8 @@ import type {
   ApplicationDetail,
   BankAccount,
   BankApproval,
+  BankReviewRequest,
+  FinancialQr,
   Campaign,
   DirectoryUser,
   MoneyRecord,
@@ -90,10 +92,23 @@ export const adminApi = {
       ["id", "ownerId", "accountNumber"],
       signal,
     ),
-  approveBank: (id: string) =>
-    request<BankApproval>(`admin/bank-accounts/${id}/approve`, "POST"),
-  rejectBank: (id: string) =>
-    request<void>(`admin/bank-accounts/${id}/reject`, "POST"),
+  approveBank: (id: string, body: BankReviewRequest) =>
+    request<BankApproval>(`admin/bank-accounts/${id}/approve`, "POST", body),
+  rejectBank: (id: string, body: BankReviewRequest) =>
+    request<void>(`admin/bank-accounts/${id}/reject`, "POST", body),
+  financialQr: (
+    id: string,
+    context: "bank" | "payout" | "refund",
+    signal: AbortSignal,
+  ) =>
+    request<FinancialQr>(
+      context === "bank"
+        ? `admin/bank-accounts/${id}/financial-qr`
+        : `admin/${context}s/${id}/transfer-qr`,
+      "GET",
+      undefined,
+      signal,
+    ),
   moneyList: (refund: boolean, status: string, signal: AbortSignal) =>
     list<MoneyRecord>(
       refund

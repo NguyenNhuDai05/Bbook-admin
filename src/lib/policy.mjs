@@ -12,6 +12,9 @@ const rules = [
   ["PATCH", new RegExp(`^admin/muas/${guid}/suspension$`)],
   ["PATCH", new RegExp(`^admin/users/${guid}/active$`)],
   ["GET", /^admin\/bank-accounts\/pending$/],
+  ["GET", new RegExp(`^admin/bank-accounts/${guid}/financial-qr$`)],
+  ["GET", new RegExp(`^admin/payouts/${guid}/transfer-qr$`)],
+  ["GET", new RegExp(`^admin/refunds/${guid}/transfer-qr$`)],
   ["POST", new RegExp(`^admin/bank-accounts/${guid}/(approve|reject)$`)],
   ["GET", new RegExp(`^admin/payouts(/${guid})?$`)],
   [

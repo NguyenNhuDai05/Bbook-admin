@@ -1,4 +1,5 @@
 "use client";
+import { FinancialQr } from "./financial-qr";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -15,14 +16,7 @@ import { financialActions } from "@/lib/contracts.mjs";
 import { date, maskAccount, money, shortId, statusName } from "@/lib/format";
 import type { BankAccount } from "@/lib/types";
 import type { PageProps } from "./admin-app";
-import {
-  Badge,
-  DocumentView,
-  Modal,
-  PageTitle,
-  State,
-  SubmitButton,
-} from "./ui";
+import { Badge, Modal, PageTitle, State, SubmitButton } from "./ui";
 export function BankAccounts() {
   const query = useResource(service.banks());
   const [selected, setSelected] = useState<BankAccount | null>(null),
@@ -30,6 +24,8 @@ export function BankAccounts() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [search, setSearch] = useState("");
+  const [rejectReason, setRejectReason] = useState("ACCOUNT_INFO_INCORRECT");
+  const [rejectNote, setRejectNote] = useState("");
   const submission = useSubmission();
   const { busy } = submission;
   const rows =
@@ -40,6 +36,10 @@ export function BankAccounts() {
     ) || [];
   async function act() {
     if (!selected || !review) return;
+    if (review === "reject" && rejectReason === "OTHER" && !rejectNote.trim()) {
+      setError("Lý do khác cần ghi chú.");
+      return;
+    }
     if (!submission.begin()) return;
     setError("");
     setNotice("");
@@ -47,6 +47,12 @@ export function BankAccounts() {
       const result = await service.reviewBank(
         selected.id,
         review === "approve",
+        {
+          reviewToken: selected.reviewToken,
+          ...(review === "reject"
+            ? { reason: rejectReason, note: rejectNote.trim() || undefined }
+            : {}),
+        },
       );
       setNotice(
         review === "approve"
@@ -57,6 +63,9 @@ export function BankAccounts() {
       setReview(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể cập nhật.");
+      setSelected(null);
+      setReview(null);
+      query.reload();
     } finally {
       submission.end();
     }
@@ -73,6 +82,11 @@ export function BankAccounts() {
           </button>
         }
       />
+      {error && !selected && (
+        <p className="inline-error" role="alert">
+          {error}
+        </p>
+      )}
       {notice && (
         <div className="notice success" role="status">
           <CheckCircle2 size={17} />
@@ -174,7 +188,7 @@ export function BankAccounts() {
               ? review === "approve"
                 ? "Duyệt tài khoản nhận tiền?"
                 : "Từ chối tài khoản nhận tiền?"
-              : "Chi tiết tài khoản nhận tiền"
+              : "Đối chiếu tài khoản nhận tiền"
           }
           description={selected.ownerName || shortId(selected.ownerId)}
           onClose={() => {
@@ -201,7 +215,11 @@ export function BankAccounts() {
               <>
                 <button
                   className="button danger-outline"
-                  onClick={() => setReview("reject")}
+                  onClick={() => {
+                    setRejectNote("");
+                    setRejectReason("ACCOUNT_INFO_INCORRECT");
+                    setReview("reject");
+                  }}
                 >
                   Từ chối
                 </button>
@@ -217,11 +235,19 @@ export function BankAccounts() {
         >
           <dl className="detail-facts">
             <div>
-              <dt>Ngân hàng</dt>
-              <dd>{selected.bankName || selected.bankCode}</dd>
+              <dt>Phương thức / Ngân hàng</dt>
+              <dd>
+                {selected.method === "MOMO"
+                  ? "MoMo"
+                  : selected.bankName || selected.bankCode}
+              </dd>
             </div>
             <div>
-              <dt>Số tài khoản đối chiếu</dt>
+              <dt>
+                {selected.method === "MOMO"
+                  ? "Số MoMo"
+                  : "Số tài khoản đối chiếu"}
+              </dt>
               <dd>{selected.accountNumber}</dd>
             </div>
             <div>
@@ -229,16 +255,72 @@ export function BankAccounts() {
               <dd>{selected.accountHolderName}</dd>
             </div>
             <div>
+              <dt>Trạng thái</dt>
+              <dd>
+                {selected.verificationStatus === "PENDING_ADMIN"
+                  ? "Chờ duyệt"
+                  : selected.verificationStatus}
+              </dd>
+            </div>
+            <div>
+              <dt>Mã người dùng</dt>
+              <dd>{selected.ownerId}</dd>
+            </div>
+            <div>
+              <dt>Mã ngân hàng / BIN</dt>
+              <dd>
+                {selected.bankCode} / {selected.bankBin}
+              </dd>
+            </div>
+            <div>
               <dt>Ngày gửi</dt>
               <dd>{date(selected.createdAt)}</dd>
             </div>
           </dl>
-          {selected.qrCodeUrl && (
-            <DocumentView url={selected.qrCodeUrl} label="QR nhận tiền" />
+          {selected.method === "MOMO" && selected.hasFinancialQr && (
+            <FinancialQr
+              key={selected.reviewToken}
+              id={selected.id}
+              context="bank"
+            />
+          )}
+          {review === "reject" && (
+            <div>
+              <label>
+                Lý do từ chối
+                <select
+                  aria-label="Lý do từ chối"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                >
+                  <option value="ACCOUNT_INFO_INCORRECT">
+                    Thông tin tài khoản không đúng
+                  </option>
+                  <option value="HOLDER_NAME_MISMATCH">
+                    Tên chủ tài khoản không khớp
+                  </option>
+                  <option value="QR_INFO_MISMATCH">
+                    Thông tin QR không khớp
+                  </option>
+                  <option value="QR_UNREADABLE">QR không đọc được</option>
+                  <option value="OTHER">Khác</option>
+                </select>
+              </label>
+              <label>
+                Ghi chú nội bộ
+                <textarea
+                  aria-label="Ghi chú từ chối"
+                  maxLength={500}
+                  value={rejectNote}
+                  onChange={(e) => setRejectNote(e.target.value)}
+                />
+              </label>
+            </div>
           )}
           <div className="notice warning">
-            Sau khi duyệt, tài khoản cần chờ 24 giờ trước khi được sử dụng nhận
-            tiền. Đây là duyệt tài khoản, không phải chuyển tiền.
+            Đối chiếu thông tin trước khi phê duyệt. Việc phê duyệt không đồng
+            nghĩa BBook xác minh quyền sở hữu tài khoản với ngân hàng hoặc MoMo.
+            Sau khi phê duyệt, tài khoản có thể được sử dụng để nhận tiền.
           </div>
           {error && (
             <p className="inline-error" role="alert">
@@ -568,10 +650,13 @@ export function MoneyDetail({
               </div>
             ))}
           </dl>
-          {(refund ? item.destinationQrCodeUrl : item.qrCodeUrl) && (
-            <DocumentView
-              url={refund ? item.destinationQrCodeUrl : item.qrCodeUrl}
-              label="QR nhận tiền"
+          {["Pending", "ManualActionRequired", "Processing"].includes(
+            status,
+          ) && (
+            <FinancialQr
+              id={id}
+              context={refund ? "refund" : "payout"}
+              amount={item.amount}
             />
           )}
         </section>

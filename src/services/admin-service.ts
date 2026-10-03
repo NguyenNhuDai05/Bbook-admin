@@ -2,6 +2,7 @@ import { adminApi as api } from "@/repositories/admin-api";
 import { invalidateResources, type ResourceQuery } from "@/lib/client";
 import type {
   BankApproval,
+  BankReviewRequest,
   FinancialRequest,
   NotificationRequest,
   RejectionRequest,
@@ -52,11 +53,12 @@ export const adminService = {
       ["admin:recipients:", "admin:applications:", `admin:mua:${id}`],
     ),
   banks: () => query("admin:banks:pending", (signal) => api.banks(signal)),
-  reviewBank: (id: string, approve: boolean) =>
+  reviewBank: (id: string, approve: boolean, body: BankReviewRequest) =>
     mutate<BankApproval | void>(
-      () => (approve ? api.approveBank(id) : api.rejectBank(id)),
+      () => (approve ? api.approveBank(id, body) : api.rejectBank(id, body)),
       ["admin:banks:", "admin:mua:"],
     ),
+  financialQr: api.financialQr,
   moneyList: (refund: boolean, status = "") =>
     query(`admin:${refund ? "refunds" : "payouts"}:list:${status}`, (signal) =>
       api.moneyList(refund, status, signal),
