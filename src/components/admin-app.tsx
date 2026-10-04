@@ -29,6 +29,7 @@ import type { AdminUser } from "@/lib/types";
 import { Dashboard, Applications } from "./overview-pages";
 import { VerificationDetail } from "./verification-detail";
 import { Complaints } from "./complaint-pages";
+import { Moderation } from "./moderation-pages";
 import { BankAccounts, MoneyList, MoneyDetail } from "./finance-pages";
 import {
   Notifications,
@@ -63,6 +64,11 @@ const groups = [
   {
     label: "NỘI DUNG",
     items: [
+      {
+        key: "moderation",
+        label: "Báo cáo nội dung",
+        icon: MessageCircleWarning,
+      },
       { key: "styles", label: "Phong cách makeup", icon: Sparkles },
       { key: "notifications", label: "Thông báo", icon: Bell },
     ],
@@ -135,6 +141,7 @@ export function AdminApp({
   else if (key === "users") page = <Directory />;
   else if (key === "bookings") page = <Bookings {...props} id={id} />;
   else if (key === "complaints") page = <Complaints {...props} id={id} />;
+  else if (key === "moderation") page = <Moderation {...props} id={id} />;
   else if (key === "activity" || key === "settings")
     page = <PlannedPage kind={key} />;
   else
