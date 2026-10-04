@@ -1,6 +1,10 @@
 const guid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules = [
+  ["GET", /^admin\/moderation\/reports$/],
+  ["GET", new RegExp(`^admin/moderation/reports/${guid}$`)],
+  ["GET", new RegExp(`^admin/moderation/reports/${guid}/image$`)],
+  ["POST", new RegExp(`^admin/moderation/reports/${guid}/decision$`)],
   ["GET", /^admin\/dashboard$/],
   ["GET", /^admin\/complaints$/],
   ["GET", new RegExp(`^complaints/${guid}$`)],

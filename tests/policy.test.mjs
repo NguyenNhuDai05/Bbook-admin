@@ -2,6 +2,27 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { allowedApiPath, isAdmin, isSameOrigin } from "../src/lib/policy.mjs";
 const id = "11111111-1111-4111-8111-111111111111";
+test("moderation proxy permits only bounded admin routes and expected methods", () => {
+  for (const path of [
+    "admin/moderation/reports",
+    `admin/moderation/reports/${id}`,
+    `admin/moderation/reports/${id}/image`,
+  ])
+    assert.equal(allowedApiPath("GET", path), true);
+  assert.equal(
+    allowedApiPath("POST", `admin/moderation/reports/${id}/decision`),
+    true,
+  );
+  for (const [method, path] of [
+    ["POST", "admin/moderation/reports"],
+    ["DELETE", `admin/moderation/reports/${id}`],
+    ["GET", `admin/moderation/reports/${id}/decision`],
+    ["GET", "admin/moderation/reports/not-a-guid"],
+    ["POST", "moderation/reports"],
+    ["GET", "admin/moderation/reports/../image"],
+  ])
+    assert.equal(allowedApiPath(method, path), false);
+});
 test("proxy allows only explicit admin operations", () => {
   assert.equal(allowedApiPath("GET", "admin/mua-applications"), true);
   assert.equal(
