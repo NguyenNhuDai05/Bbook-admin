@@ -1,6 +1,10 @@
 const guid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules = [
+  ["GET", /^admin\/makeup-styles(?:\/[1-9]\d*)?$/],
+  ["POST", /^admin\/makeup-styles$/],
+  ["PUT", /^admin\/makeup-styles\/[1-9]\d*$/],
+  ["PATCH", /^admin\/makeup-styles\/[1-9]\d*\/status$/],
   ["GET", /^admin\/moderation\/reports$/],
   ["GET", new RegExp(`^admin/moderation/reports/${guid}$`)],
   ["GET", new RegExp(`^admin/moderation/reports/${guid}/image$`)],

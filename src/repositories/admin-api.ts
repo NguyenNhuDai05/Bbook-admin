@@ -42,6 +42,27 @@ async function paged<T>(
   ) as Paged<T>;
 }
 export const adminApi = {
+  adminStyles: (
+    page: number,
+    search: string,
+    status: string,
+    signal: AbortSignal,
+  ) =>
+    paged<Style>(
+      `admin/makeup-styles?${params({ page, pageSize: 10, search, status })}`,
+      ["styleId", "name", "isActive", "createdAt"],
+      signal,
+    ),
+  adminStyle: (id: number, signal: AbortSignal) =>
+    request<Style>(`admin/makeup-styles/${id}`, "GET", undefined, signal),
+  saveAdminStyle: (id: number | null, name: string, description: string) =>
+    request<Style>(
+      `admin/makeup-styles${id === null ? "" : `/${id}`}`,
+      id === null ? "POST" : "PUT",
+      { name, description },
+    ),
+  statusAdminStyle: (id: number, isActive: boolean) =>
+    request<Style>(`admin/makeup-styles/${id}/status`, "PATCH", { isActive }),
   dashboard: async (from: string, to: string, signal: AbortSignal) =>
     validateDashboard(
       await request<DashboardData>(

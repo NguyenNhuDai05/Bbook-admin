@@ -40,13 +40,9 @@ import { badgeText } from "@/lib/work-contracts.mjs";
 import { Complaints } from "./complaint-pages";
 import { Moderation } from "./moderation-pages";
 import { BankAccounts, MoneyList, MoneyDetail } from "./finance-pages";
-import {
-  Notifications,
-  Styles,
-  Directory,
-  PlannedPage,
-  Bookings,
-} from "./other-pages";
+import { Notifications, Directory, PlannedPage, Bookings } from "./other-pages";
+import { Styles } from "./styles-page";
+import referenceCss from "./admin-reference.module.css";
 const groups = [
   {
     label: "",
@@ -172,7 +168,9 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
       </div>
     );
   return (
-    <div className={`admin-shell ${collapsed ? "collapsed" : ""}`}>
+    <div
+      className={`admin-shell ${collapsed ? "collapsed" : ""} ${key === "styles" ? referenceCss.shell : ""}`}
+    >
       {mobile && (
         <button
           aria-label="Đóng menu"

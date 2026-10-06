@@ -25,7 +25,30 @@ async function mutate<T>(action: () => Promise<T>, prefixes: string[]) {
     ]);
   }
 }
+async function mutateStyle<T>(action: () => Promise<T>, prefixes: string[]) {
+  const result = await action();
+  invalidateResources(prefixes);
+  return result;
+}
 export const adminService = {
+  adminStyles: (page: number, search: string, status: string) =>
+    query(`admin:style-catalog:list:${page}:${status}:${search}`, (signal) =>
+      api.adminStyles(page, search, status, signal),
+    ),
+  adminStyle: (id: number) =>
+    query(`admin:style-catalog:detail:${id}`, (signal) =>
+      api.adminStyle(id, signal),
+    ),
+  saveAdminStyle: (id: number | null, name: string, description: string) =>
+    mutateStyle(
+      () => api.saveAdminStyle(id, name, description),
+      ["admin:style-catalog:", "admin:styles:"],
+    ),
+  statusAdminStyle: (id: number, active: boolean) =>
+    mutateStyle(
+      () => api.statusAdminStyle(id, active),
+      ["admin:style-catalog:", "admin:styles:"],
+    ),
   dashboard: (from: string, to: string) =>
     query(`admin:dashboard:${from}:${to}`, (signal) =>
       api.dashboard(from, to, signal),

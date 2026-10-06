@@ -155,6 +155,7 @@ export interface Style {
   name: string | null;
   description?: string | null;
   isActive: boolean;
+  createdAt?: string;
 }
 export interface DirectoryUser extends AdminUser {
   avatarUrl?: string | null;
