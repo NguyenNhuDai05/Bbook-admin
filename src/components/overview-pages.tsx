@@ -1,103 +1,16 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import {
-  ArrowRight,
-  ChevronRight,
-  Clock3,
-  RefreshCw,
-  Search,
-} from "lucide-react";
-import { invalidateResources, useResource } from "@/lib/client";
+import { ChevronRight, Clock3, RefreshCw, Search } from "lucide-react";
+import { useResource } from "@/lib/client";
 import { adminService as service } from "@/services/admin-service";
 import { date, shortId, waitHours } from "@/lib/format";
 import type { PageProps } from "./admin-app";
 import { Badge, PageTitle, Pagination, State } from "./ui";
-import { DashboardAnalytics } from "./dashboard-analytics";
-import { WorkOverview } from "./work-summary";
-import { RecentFeedback } from "./feedback-pages";
-export function Dashboard({ base }: PageProps) {
-  const applications = useResource(service.applications("PendingReview", 1, 5));
-  const reload = () => invalidateResources(["admin:"]);
-  return (
-    <>
-      <PageTitle
-        title="Tổng quan"
-        description="Theo dõi kinh doanh, phản hồi người dùng và công việc đang chờ"
-        action={
-          <button className="button secondary" onClick={reload}>
-            <RefreshCw size={15} />
-            Làm mới
-          </button>
-        }
-      />
-      <WorkOverview />
-      <DashboardAnalytics />
-      <RecentFeedback />
-      <section className="panel recent-applications">
-        <div className="panel-heading">
-          <div>
-            <h2>Hồ sơ MUA mới gửi</h2>
-            <p>Những hồ sơ đang chờ xét duyệt</p>
-          </div>
-          <Link className="text-button" href={`${base}/verification`}>
-            Xem tất cả
-            <ArrowRight size={15} />
-          </Link>
-        </div>
-        {applications.loading || applications.error ? (
-          <State
-            loading={applications.loading}
-            error={applications.error}
-            retry={applications.reload}
-          />
-        ) : applications.data?.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Makeup Artist</th>
-                  <th>Khu vực</th>
-                  <th>Ngày gửi</th>
-                  <th>Thời gian chờ</th>
-                  <th>Trạng thái</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {applications.data.map((item) => (
-                  <tr key={item.muaId}>
-                    <td>
-                      <Person item={item} />
-                    </td>
-                    <td>{item.city || "—"}</td>
-                    <td>{date(item.submittedAt)}</td>
-                    <td>
-                      <Waiting value={item.submittedAt} />
-                    </td>
-                    <td>
-                      <Badge status={item.verificationStatus} />
-                    </td>
-                    <td>
-                      <Link
-                        className="text-button"
-                        href={`${base}/verification/${item.muaId}`}
-                      >
-                        Xem hồ sơ
-                        <ChevronRight size={14} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <State empty="Không có hồ sơ chờ duyệt" />
-        )}
-      </section>
-    </>
-  );
+import { OperationsDashboard } from "./dashboard-operations";
+export function Dashboard(props: PageProps) {
+  void props;
+  return <OperationsDashboard />;
 }
 export function Person({
   item,
