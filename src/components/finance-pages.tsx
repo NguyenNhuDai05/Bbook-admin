@@ -2,6 +2,7 @@
 import { FinancialQr } from "./financial-qr";
 import Link from "next/link";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -333,12 +334,23 @@ export function BankAccounts() {
   );
 }
 export function MoneyList({ base, refund }: PageProps & { refund: boolean }) {
+  const params = useSearchParams();
+  const [actionOnly, setActionOnly] = useState(
+    () => params.get("queue") === "action",
+  );
   const [status, setStatus] = useState(""),
     [search, setSearch] = useState("");
   const query = useResource(service.moneyList(refund, refund ? status : ""));
   const rows =
     query.data?.filter(
       (item) =>
+        (!actionOnly ||
+          (["Pending", "ManualActionRequired", "Failed"].includes(
+            statusName(item.status, refund),
+          ) &&
+            (refund ||
+              statusName(item.status, refund) !== "Failed" ||
+              !item.reconciledAt))) &&
         (!status || statusName(item.status, refund) === status) &&
         `${item.customerName || item.accountHolderName || ""} ${item.id || item.refundId || ""}`
           .toLowerCase()
@@ -367,6 +379,14 @@ export function MoneyList({ base, refund }: PageProps & { refund: boolean }) {
           </button>
         }
       />
+      {actionOnly && (
+        <div className="notice info">
+          Đang hiển thị các khoản cần xử lý.
+          <button className="text-button" onClick={() => setActionOnly(false)}>
+            Xem tất cả
+          </button>
+        </div>
+      )}
       <div className="notice info">
         <WalletCards size={17} />
         Thao tác admin ghi nhận kết quả xử lý. Không tự thực hiện giao dịch
@@ -417,6 +437,7 @@ export function MoneyList({ base, refund }: PageProps & { refund: boolean }) {
             value={status}
             onChange={(e) => {
               setStatus(e.target.value);
+              setActionOnly(false);
             }}
           >
             <option value="">Tất cả trạng thái</option>

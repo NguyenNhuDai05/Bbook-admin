@@ -70,7 +70,7 @@ export const moderationService = {
         { action, note },
       );
     } finally {
-      invalidateResources(["admin:moderation:"]);
+      invalidateResources(["admin:moderation:", "admin:work-summary"]);
     }
   },
 };

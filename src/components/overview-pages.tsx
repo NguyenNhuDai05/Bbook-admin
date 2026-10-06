@@ -3,87 +3,27 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   ArrowRight,
-  ArrowUpRight,
-  Check,
   ChevronRight,
   Clock3,
-  FileCheck2,
-  Landmark,
   RefreshCw,
   Search,
-  ShieldCheck,
-  WalletCards,
-  RotateCcw,
 } from "lucide-react";
-import { useResource } from "@/lib/client";
+import { invalidateResources, useResource } from "@/lib/client";
 import { adminService as service } from "@/services/admin-service";
-import { date, money, shortId, waitHours, statusName } from "@/lib/format";
-import type { MoneyRecord } from "@/lib/types";
+import { date, shortId, waitHours } from "@/lib/format";
 import type { PageProps } from "./admin-app";
 import { Badge, PageTitle, Pagination, State } from "./ui";
 import { DashboardAnalytics } from "./dashboard-analytics";
+import { WorkOverview } from "./work-summary";
+import { RecentFeedback } from "./feedback-pages";
 export function Dashboard({ base }: PageProps) {
-  const applications = useResource(service.applications("PendingReview", 1, 5)),
-    banks = useResource(service.banks()),
-    payouts = useResource(service.moneyList(false)),
-    refunds = useResource(service.moneyList(true));
-  const pending = (items?: MoneyRecord[], refund = false) =>
-    items?.filter((x) =>
-      ["Pending", "ManualActionRequired", "Processing", "Failed"].includes(
-        statusName(x.status, refund),
-      ),
-    );
-  const p = pending(payouts.data),
-    r = pending(refunds.data, true);
-  const cards = [
-    {
-      label: "Hồ sơ MUA chờ duyệt",
-      value: undefined,
-      icon: ShieldCheck,
-      route: "verification",
-      error: applications.error,
-      loading: applications.loading,
-      hint: "Chưa có dữ liệu tổng số · API chưa cung cấp KPI",
-    },
-    {
-      label: "Tài khoản chờ duyệt",
-      value: banks.data?.length,
-      icon: Landmark,
-      route: "bank-accounts",
-      error: banks.error,
-      loading: banks.loading,
-      hint: "Tài khoản nhận tiền mới",
-    },
-    {
-      label: "Chi trả cần xử lý",
-      value: p?.length,
-      icon: WalletCards,
-      route: "payouts",
-      error: payouts.error,
-      loading: payouts.loading,
-      hint: p
-        ? money(p.reduce((total, x) => total + x.amount, 0))
-        : "Chưa có dữ liệu",
-    },
-    {
-      label: "Hoàn tiền cần xử lý",
-      value: r?.length,
-      icon: RotateCcw,
-      route: "refunds",
-      error: refunds.error,
-      loading: refunds.loading,
-      hint: r
-        ? money(r.reduce((total, x) => total + x.amount, 0))
-        : "Chưa có dữ liệu",
-    },
-  ];
-  const reload = () =>
-    [applications, banks, payouts, refunds].forEach((x) => x.reload());
+  const applications = useResource(service.applications("PendingReview", 1, 5));
+  const reload = () => invalidateResources(["admin:"]);
   return (
     <>
       <PageTitle
         title="Tổng quan"
-        description="Thống kê kinh doanh, người dùng và công việc cần xử lý"
+        description="Theo dõi kinh doanh, phản hồi người dùng và công việc đang chờ"
         action={
           <button className="button secondary" onClick={reload}>
             <RefreshCw size={15} />
@@ -91,122 +31,14 @@ export function Dashboard({ base }: PageProps) {
           </button>
         }
       />
+      <WorkOverview />
       <DashboardAnalytics />
-      <h2>Vận hành</h2>
-      <div className="kpi-grid">
-        {cards.map((card) => (
-          <Link
-            className="kpi-card"
-            key={card.route}
-            href={`${base}/${card.route}`}
-          >
-            <div className="kpi-top">
-              <span>{card.label}</span>
-              <card.icon size={20} />
-            </div>
-            <strong>
-              {card.loading ? "…" : card.error ? "—" : (card.value ?? "—")}
-            </strong>
-            <div className="kpi-bottom">
-              <span className={card.error ? "text-danger" : ""}>
-                {card.error ? "Không thể tải dữ liệu" : card.hint}
-              </span>
-              <ArrowUpRight size={16} />
-            </div>
-          </Link>
-        ))}
-      </div>
-      <div className="dashboard-grid">
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Cần xử lý</h2>
-              <p>Các công việc cần được ưu tiên</p>
-            </div>
-            <span className="small-label">VẬN HÀNH</span>
-          </div>
-          <div className="priority-list">
-            {[
-              {
-                count: undefined,
-                text: "hồ sơ MUA chờ lâu · chưa có thống kê tổng",
-                route: "verification",
-                icon: Clock3,
-                tone: "warning",
-              },
-              {
-                count: p?.filter((x) => statusName(x.status) === "Processing")
-                  .length,
-                text: "khoản chi trả đang xử lý",
-                route: "payouts",
-                icon: WalletCards,
-                tone: "info",
-              },
-              {
-                count: r?.filter((x) => statusName(x.status, true) === "Failed")
-                  .length,
-                text: "khoản hoàn tiền thất bại",
-                route: "refunds",
-                icon: RotateCcw,
-                tone: "danger",
-              },
-              {
-                count: banks.data?.length,
-                text: "tài khoản nhận tiền chờ duyệt",
-                route: "bank-accounts",
-                icon: Landmark,
-                tone: "neutral",
-              },
-            ].map((item) => (
-              <Link
-                href={`${base}/${item.route}`}
-                className="priority-row"
-                key={item.route}
-              >
-                <span className={`priority-icon ${item.tone}`}>
-                  <item.icon size={19} />
-                </span>
-                <span>
-                  <strong>{item.count ?? "—"}</strong> {item.text}
-                </span>
-                <ChevronRight size={17} />
-              </Link>
-            ))}
-          </div>
-        </section>
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Quy trình vận hành</h2>
-              <p>Kiểm tra đúng bước, đúng trạng thái</p>
-            </div>
-            <FileCheck2 size={20} />
-          </div>
-          <div className="process-list">
-            {[
-              "Đối chiếu CCCD và khuôn mặt",
-              "Kiểm tra dịch vụ và portfolio",
-              "Duyệt tài khoản nhận tiền riêng",
-              "Ghi nhận chi trả và hoàn tiền",
-            ].map((text, index) => (
-              <div key={text}>
-                <span>{index + 1}</span>
-                <p>{text}</p>
-                <Check size={15} />
-              </div>
-            ))}
-          </div>
-          <div className="panel-note">
-            Danh tính, hồ sơ nghề nghiệp và tài khoản nhận tiền được hiển thị
-            riêng. Backend hiện xét duyệt toàn bộ hồ sơ MUA.
-          </div>
-        </section>
-      </div>
-      <section className="panel">
+      <RecentFeedback />
+      <section className="panel recent-applications">
         <div className="panel-heading">
           <div>
-            <h2>Hồ sơ mới gửi</h2>
-            <p>Những hồ sơ đang chờ admin xét duyệt</p>
+            <h2>Hồ sơ MUA mới gửi</h2>
+            <p>Những hồ sơ đang chờ xét duyệt</p>
           </div>
           <Link className="text-button" href={`${base}/verification`}>
             Xem tất cả
@@ -233,7 +65,7 @@ export function Dashboard({ base }: PageProps) {
                 </tr>
               </thead>
               <tbody>
-                {applications.data.slice(0, 5).map((item) => (
+                {applications.data.map((item) => (
                   <tr key={item.muaId}>
                     <td>
                       <Person item={item} />
@@ -263,19 +95,6 @@ export function Dashboard({ base }: PageProps) {
         ) : (
           <State empty="Không có hồ sơ chờ duyệt" />
         )}
-      </section>
-      <section className="activity-teaser">
-        <div>
-          <h3>Nhật ký hoạt động</h3>
-          <p>
-            Backend chưa cung cấp lịch sử thao tác admin. Chưa có dữ liệu để
-            hiển thị.
-          </p>
-        </div>
-        <Link className="text-button" href={`${base}/activity`}>
-          Xem module
-          <ArrowRight size={15} />
-        </Link>
       </section>
     </>
   );

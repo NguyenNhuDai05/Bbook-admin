@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   MessageCircleWarning,
+  MessageSquare,
   Search,
   Settings,
   ShieldCheck,
@@ -28,6 +29,14 @@ import { useSubmission } from "@/lib/client";
 import type { AdminUser } from "@/lib/types";
 import { Dashboard, Applications } from "./overview-pages";
 import { VerificationDetail } from "./verification-detail";
+import { FeedbackPage } from "./feedback-pages";
+import {
+  WorkSummaryProvider,
+  WorkBadge,
+  WorkNotifications,
+  useWorkSummary,
+} from "./work-summary";
+import { badgeText } from "@/lib/work-contracts.mjs";
 import { Complaints } from "./complaint-pages";
 import { Moderation } from "./moderation-pages";
 import { BankAccounts, MoneyList, MoneyDetail } from "./finance-pages";
@@ -71,6 +80,7 @@ const groups = [
       },
       { key: "styles", label: "Phong cách makeup", icon: Sparkles },
       { key: "notifications", label: "Thông báo", icon: Bell },
+      { key: "feedback", label: "Feedback người dùng", icon: MessageSquare },
     ],
   },
   {
@@ -91,6 +101,15 @@ export function AdminApp({
   route: string[];
   user: AdminUser;
 }) {
+  return (
+    <WorkSummaryProvider>
+      <AdminWorkspace route={route} user={user} />
+    </WorkSummaryProvider>
+  );
+}
+function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
+  const work = useWorkSummary();
+  const [workOpen, setWorkOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false),
     [mobile, setMobile] = useState(false),
     [search, setSearch] = useState(""),
@@ -137,6 +156,7 @@ export function AdminApp({
       <MoneyList {...props} refund={key === "refunds"} />
     );
   else if (key === "notifications") page = <Notifications />;
+  else if (key === "feedback") page = <FeedbackPage id={id} />;
   else if (key === "styles") page = <Styles />;
   else if (key === "users") page = <Directory />;
   else if (key === "bookings") page = <Bookings {...props} id={id} />;
@@ -180,7 +200,7 @@ export function AdminApp({
               {group.label && <div className="nav-label">{group.label}</div>}
               {group.items.map((item) => (
                 <Link
-                  title={item.label}
+                  title={`${item.label}${work.data?.counts[item.key] !== undefined ? ` · ${work.data.counts[item.key]} việc chưa xử lý` : ""}${work.error ? " · Số liệu chưa cập nhật" : ""}`}
                   key={item.key}
                   href={`${base}/${item.key}`}
                   onClick={() => setMobile(false)}
@@ -188,6 +208,7 @@ export function AdminApp({
                 >
                   <item.icon size={18} />
                   <span>{item.label}</span>
+                  <WorkBadge module={item.key} />
                 </Link>
               ))}
             </div>
@@ -258,13 +279,37 @@ export function AdminApp({
               </div>
             )}
           </div>
-          <Link
-            className="icon-button"
-            href={`${base}/notifications`}
-            aria-label="Thông báo"
+          <div
+            className="work-notifications"
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget))
+                setWorkOpen(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setWorkOpen(false);
+            }}
           >
-            <Bell size={19} />
-          </Link>
+            <button
+              className="icon-button work-bell"
+              aria-expanded={workOpen}
+              aria-label={`Thông báo công việc${work.data ? `: ${work.data.total} việc chưa xử lý` : ""}`}
+              onClick={() => setWorkOpen((value) => !value)}
+            >
+              <Bell size={19} />
+              {work.data && work.data.total > 0 && (
+                <b className={`nav-count ${work.error ? "stale" : ""}`}>
+                  {badgeText(work.data.total)}
+                </b>
+              )}
+              {work.error && (
+                <span
+                  className="work-error-dot"
+                  title="Không thể cập nhật số công việc"
+                />
+              )}
+            </button>
+            {workOpen && <WorkNotifications />}
+          </div>
           <div className="account-menu">
             <button
               className="avatar admin-avatar"

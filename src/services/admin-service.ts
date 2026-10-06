@@ -18,7 +18,11 @@ async function mutate<T>(action: () => Promise<T>, prefixes: string[]) {
   try {
     return await action();
   } finally {
-    invalidateResources(prefixes);
+    invalidateResources([
+      ...prefixes,
+      "admin:work-summary",
+      "admin:dashboard:",
+    ]);
   }
 }
 export const adminService = {
