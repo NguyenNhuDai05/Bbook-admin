@@ -2550,3 +2550,124 @@ dd {
   font-size: 13px;
   line-height: 1.7;
 }
+/* Viewport shell: sidebar navigation and page content scroll independently. */
+.admin-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.topbar {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+.sidebar .brand,
+.sidebar-profile {
+  flex-shrink: 0;
+}
+.sidebar nav {
+  min-height: 0;
+}
+.main-content {
+  min-height: 0;
+}
+.main-content-scrollable {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.workspace-footer {
+  flex-shrink: 0;
+}
+.admin-scrollable-page {
+  min-height: 100%;
+}
+@media (min-width: 761px) {
+  .main-content-list {
+    overflow: hidden;
+    padding: 12px 24px;
+  }
+  .workspace:has(> .main-content-list) > .workspace-footer {
+    display: none;
+  }
+  .admin-list-page {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .admin-list-page > * {
+    flex-shrink: 0;
+  }
+  .admin-list-page > .page-heading {
+    margin-bottom: 12px;
+  }
+  .admin-list-page > .notice {
+    margin-bottom: 10px;
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+  .admin-list-page > .panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .admin-list-page > .panel > * {
+    flex-shrink: 0;
+  }
+  .admin-list-page > .panel > .table-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .admin-list-page .table-wrap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fcfcfd;
+  }
+  .admin-list-page .table-wrap td {
+    height: 48px;
+    padding: 8px 16px;
+  }
+  .admin-list-page .table-wrap th {
+    padding: 10px 16px;
+  }
+  .admin-list-page .pagination {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 7px 16px;
+  }
+  .admin-list-page > .panel > .empty-state {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  /* The notification composer is a long form, separate from its history table. */
+  .admin-list-page > .panel > .notification-form {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  .admin-list-page > .kpi-grid.compact {
+    margin-bottom: 12px;
+  }
+  .admin-list-page > .helper {
+    margin-top: 8px;
+  }
+}
+@media (max-width: 760px) {
+  .main-content-list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .admin-list-page {
+    min-height: 100%;
+  }
+}
