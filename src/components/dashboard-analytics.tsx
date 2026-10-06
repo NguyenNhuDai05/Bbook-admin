@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useResource } from "@/lib/client";
 import { adminService } from "@/services/admin-service";
 import { money } from "@/lib/format";
-import { State } from "./ui";
+import { Pagination, State } from "./ui";
+import { newestDaily } from "@/lib/work-contracts.mjs";
 
 function vietnamToday() {
   return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
@@ -63,27 +64,6 @@ function Chart({
         </span>
         <span>{rows.at(-1)?.date}</span>
       </div>
-      <details>
-        <summary>Xem số liệu từng ngày</summary>
-        <div className="analytics-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Ngày</th>
-                <th>{title}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((x) => (
-                <tr key={x.date}>
-                  <td>{x.date}</td>
-                  <td>{financial ? money(x.value) : x.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
     </section>
   );
 }
@@ -96,6 +76,10 @@ export function DashboardAnalytics() {
   const [error, setError] = useState("");
   const resource = useResource(adminService.dashboard(range.from, range.to));
   const data = resource.data;
+  const [page, setPage] = useState(1);
+  const daily = data ? (newestDaily(data.daily) as typeof data.daily) : [];
+  const chartDaily = [...daily].reverse();
+  const visible = daily.slice((page - 1) * 20, page * 20);
   function preset(days: number) {
     const to = vietnamToday();
     const next = {
@@ -104,6 +88,7 @@ export function DashboardAnalytics() {
     };
     setDraft(next);
     setRange(next);
+    setPage(1);
     setError("");
   }
   return (
@@ -120,6 +105,7 @@ export function DashboardAnalytics() {
           }
           setError("");
           setRange({ ...draft });
+          setPage(1);
         }}
       >
         {[1, 7, 30, 0].map((days, i) => (
@@ -215,16 +201,52 @@ export function DashboardAnalytics() {
             <Chart
               title="Doanh thu theo ngày"
               financial
-              rows={data.daily.map((x) => ({ date: x.date, value: x.revenue }))}
+              rows={chartDaily.map((x) => ({ date: x.date, value: x.revenue }))}
             />
             <Chart
               title="Đăng ký mới theo ngày"
-              rows={data.daily.map((x) => ({
+              rows={chartDaily.map((x) => ({
                 date: x.date,
                 value: x.newUsers,
               }))}
             />
           </div>
+          <section className="panel daily-stats">
+            <div className="panel-heading">
+              <div>
+                <h2>Số liệu từng ngày</h2>
+                <p>Ngày mới nhất trước · Giờ Việt Nam</p>
+              </div>
+              <span className="small-label">{daily.length} ngày</span>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th aria-sort="descending">Ngày ↓</th>
+                    <th>Doanh thu phí nền tảng</th>
+                    <th>Người dùng mới</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((row) => (
+                    <tr key={row.date}>
+                      <td>{row.date.split("-").reverse().join("/")}</td>
+                      <td>{money(row.revenue)}</td>
+                      <td>{row.newUsers.toLocaleString("vi-VN")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              page={page}
+              size={20}
+              count={visible.length}
+              total={daily.length}
+              onPage={setPage}
+            />
+          </section>
           <div className="panel analytics-notes">
             <p>
               Giá trị booking hoàn thành:{" "}

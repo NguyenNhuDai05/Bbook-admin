@@ -44,7 +44,10 @@ const invalidated = new EventTarget();
 export function invalidateResources(prefixes: string[]) {
   invalidated.dispatchEvent(new CustomEvent("changed", { detail: prefixes }));
 }
-export function useResource<T>(query: ResourceQuery<T>) {
+export function useResource<T>(
+  query: ResourceQuery<T>,
+  options: { retainData?: boolean } = {},
+) {
   const [state, setState] = useState<{
     key: string;
     data?: T;
@@ -55,6 +58,7 @@ export function useResource<T>(query: ResourceQuery<T>) {
   const latest = useRef(query);
   latest.current = query;
   const enabled = query.enabled !== false;
+  const retainData = options.retainData === true;
   useEffect(() => {
     const listener = (event: Event) => {
       if (
@@ -70,7 +74,14 @@ export function useResource<T>(query: ResourceQuery<T>) {
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    setState({ key: query.key, loading: true, error: "" });
+    setState((previous) => ({
+      key: query.key,
+      loading: true,
+      error: "",
+      ...(retainData && previous.key === query.key
+        ? { data: previous.data }
+        : {}),
+    }));
     latest.current
       .load(controller.signal)
       .then((data) => {
@@ -79,15 +90,18 @@ export function useResource<T>(query: ResourceQuery<T>) {
       })
       .catch((error) => {
         if (!controller.signal.aborted)
-          setState({
+          setState((previous) => ({
             key: query.key,
             loading: false,
+            ...(retainData && previous.key === query.key
+              ? { data: previous.data }
+              : {}),
             error:
               error instanceof Error ? error.message : "Không thể tải dữ liệu.",
-          });
+          }));
       });
     return () => controller.abort();
-  }, [query.key, enabled, version]);
+  }, [query.key, enabled, version, retainData]);
   const current =
     state.key === query.key
       ? state
