@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import type { AdminUser } from "./types";
-import { isAdmin } from "./policy.mjs";
+import { readAdminProfile, SessionUnavailableError } from "./admin-session.mjs";
+export {
+  AuthorizationError,
+  SessionUnavailableError,
+} from "./admin-session.mjs";
 export const SESSION_COOKIE = "bbook_admin_session";
 export function backendUrl() {
   const configured = process.env.BACKEND_API_URL;
@@ -15,11 +19,6 @@ export function backendUrl() {
   )
     throw new Error("Cấu hình API không hợp lệ.");
   return configured.replace(/\/$/, "");
-}
-export class AuthorizationError extends Error {
-  constructor() {
-    super("Bạn không có quyền thực hiện thao tác này.");
-  }
 }
 export function requestOrigin(request: Request) {
   if (process.env.APP_ORIGIN) return process.env.APP_ORIGIN;
@@ -52,12 +51,24 @@ export async function currentAdmin(): Promise<{
 } | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const response = await upstream("User/profile", token);
-  if (response.status === 401) return null;
-  if (response.status === 403) throw new AuthorizationError();
-  if (!response.ok)
-    throw new Error("Không thể kiểm tra phiên đăng nhập. Vui lòng thử lại.");
-  const user = (await response.json()) as AdminUser;
-  if (!isAdmin(user.role)) throw new AuthorizationError();
+  const user = await verifyAdminToken(token);
+  if (!user) return null;
   return { token, user };
+}
+
+export async function verifyAdminToken(
+  token: string,
+): Promise<AdminUser | null> {
+  try {
+    return await readAdminProfile(() => upstream("User/profile", token));
+  } catch (error) {
+    if (error instanceof SessionUnavailableError) {
+      // Never log JWTs, credentials, profile/body data or upstream URLs.
+      console.error("[admin-session] Profile verification unavailable", {
+        reason: error.reason,
+        status: error.status,
+      });
+    }
+    throw error;
+  }
 }
