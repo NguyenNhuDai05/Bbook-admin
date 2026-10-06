@@ -6,6 +6,7 @@ import {
   requestOrigin,
   SESSION_COOKIE,
   upstream,
+  verifyAdminToken,
 } from "@/lib/server";
 import { isAdmin, isSameOrigin } from "@/lib/policy.mjs";
 export async function POST(request: NextRequest) {
@@ -49,11 +50,11 @@ export async function POST(request: NextRequest) {
         { message: "Bạn không có quyền thực hiện thao tác này." },
         { status: 403 },
       );
-    const profile = await upstream("User/profile", auth.token);
-    if (!profile.ok || !isAdmin((await profile.json()).role))
+    const profile = await verifyAdminToken(auth.token);
+    if (!profile)
       return NextResponse.json(
-        { message: "Bạn không có quyền thực hiện thao tác này." },
-        { status: 403 },
+        { message: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại." },
+        { status: 401 },
       );
     const seconds = Math.floor(
       (new Date(auth.expiration).getTime() - Date.now()) / 1000,

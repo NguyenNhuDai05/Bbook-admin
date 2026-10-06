@@ -36,8 +36,8 @@ function ReportList({ base }: PageProps) {
           </button>
         }
       />
-      <section className="panel complaint-panel">
-        <div className="complaint-toolbar">
+      <section className="panel list-panel">
+        <div className="filters moderation-toolbar">
           <label>
             Trạng thái
             <select
@@ -55,13 +55,20 @@ function ReportList({ base }: PageProps) {
               ))}
             </select>
           </label>
-          <span>{query.data?.total ?? 0} báo cáo</span>
+          <span>
+            {query.loading
+              ? "Đang tải…"
+              : query.error
+                ? "—"
+                : (query.data?.total ?? "—")}{" "}
+            báo cáo
+          </span>
         </div>
         {query.loading || query.error || !query.data?.items.length ? (
           <State
             loading={query.loading}
             error={query.error}
-            retry={query.reload}
+            retry={query.error ? query.reload : undefined}
             empty="Chưa có báo cáo"
           />
         ) : (
@@ -87,10 +94,10 @@ function ReportList({ base }: PageProps) {
                     <td>{date(item.createdAt)}</td>
                     <td>
                       <Link
-                        className="text-button"
+                        className="button table-button"
                         href={`${base}/moderation/${item.id}`}
                       >
-                        Xem báo cáo →
+                        Chi tiết
                       </Link>
                     </td>
                   </tr>
@@ -186,6 +193,14 @@ function ReportDetailPage({ base, id }: PageProps & { id: string }) {
             {report.description || "Không có mô tả bổ sung."}
           </p>
           <h2>Nội dung được báo cáo</h2>
+          {report.targetOwnerId && (
+            <Link
+              className="button secondary"
+              href={`${base}/users?search=${encodeURIComponent(report.targetOwnerId)}`}
+            >
+              Xem tài khoản bị báo cáo
+            </Link>
+          )}
           {report.imageUrls?.map((url, index) => (
             <DocumentView
               key={url}

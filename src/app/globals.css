@@ -2551,6 +2551,28 @@ dd {
   line-height: 1.7;
 }
 /* Viewport shell: sidebar navigation and page content scroll independently. */
+.moderation-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.moderation-toolbar > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+.kpi-grid.compact .kpi-card {
+  padding: 10px 18px;
+  gap: 0;
+}
+.kpi-grid.compact .kpi-card strong {
+  font-size: 26px;
+  line-height: 1.2;
+  margin: 2px 0;
+}
+.kpi-grid.compact .kpi-card small {
+  margin-top: 0;
+}
 .admin-shell {
   height: 100dvh;
   min-height: 0;

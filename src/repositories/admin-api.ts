@@ -107,9 +107,46 @@ export const adminApi = {
     request<void>(`admin/muas/${id}/suspension`, "PATCH", { suspended }),
   activeUser: (id: string, isActive: boolean) =>
     request<void>(`admin/users/${id}/active`, "PATCH", { isActive }),
-  banks: (signal: AbortSignal) =>
+  users: (
+    search: string,
+    role: string,
+    active: boolean,
+    page: number,
+    signal: AbortSignal,
+  ) =>
+    paged<DirectoryUser>(
+      `admin/management/users?${params({ search, role, active: String(active), page, pageSize: 20 })}`,
+      ["userId", "fullName", "email", "isActive"],
+      signal,
+    ),
+  financialSummary: async (refund: boolean, signal: AbortSignal) => {
+    const result = await request<
+      Record<string, { count: number; amount: number }>
+    >(
+      `admin/management/financial-summary?refund=${refund}`,
+      "GET",
+      undefined,
+      signal,
+    );
+    if (
+      !result ||
+      ["pending", "processing", "completed", "failed"].some(
+        (k) =>
+          !result[k] ||
+          !Number.isSafeInteger(result[k].count) ||
+          result[k].count < 0 ||
+          !Number.isFinite(result[k].amount) ||
+          result[k].amount < 0,
+      )
+    )
+      throw new Error("Không thể đọc thống kê tài chính.");
+    return result;
+  },
+  banks: (signal: AbortSignal, status = "PENDING_ADMIN") =>
     list<BankAccount>(
-      "admin/bank-accounts/pending",
+      status === "PENDING_ADMIN"
+        ? "admin/bank-accounts/pending"
+        : `admin/bank-accounts/history?status=${status}`,
       ["id", "ownerId", "accountNumber"],
       signal,
     ),

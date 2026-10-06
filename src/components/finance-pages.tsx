@@ -3,14 +3,7 @@ import { FinancialQr } from "./financial-qr";
 import Link from "next/link";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Landmark,
-  RefreshCw,
-  Search,
-  WalletCards,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, RefreshCw, Search } from "lucide-react";
 import { useResource, useSubmission } from "@/lib/client";
 import { adminService as service } from "@/services/admin-service";
 import { financialActions } from "@/lib/contracts.mjs";
@@ -19,7 +12,8 @@ import type { BankAccount } from "@/lib/types";
 import type { PageProps } from "./admin-app";
 import { Badge, Modal, PageTitle, State, SubmitButton } from "./ui";
 export function BankAccounts() {
-  const query = useResource(service.banks());
+  const [bankStatus, setBankStatus] = useState("PENDING_ADMIN");
+  const query = useResource(service.banks(bankStatus));
   const [selected, setSelected] = useState<BankAccount | null>(null),
     [review, setReview] = useState<"approve" | "reject" | null>(null),
     [error, setError] = useState(""),
@@ -94,20 +88,21 @@ export function BankAccounts() {
           {notice}
         </div>
       )}
-      <div className="notice neutral">
-        <Landmark size={17} />
-        API hiện cung cấp danh sách chờ duyệt. Lịch sử tài khoản đã duyệt và bị
-        từ chối chưa có API quản trị.
-      </div>
       <section className="panel list-panel">
         <div className="tabs">
-          <button className="selected">Chờ duyệt</button>
-          <button disabled title="Chưa có API lịch sử">
-            Đã duyệt
-          </button>
-          <button disabled title="Chưa có API lịch sử">
-            Từ chối
-          </button>
+          {[
+            ["PENDING_ADMIN", "Chờ duyệt"],
+            ["APPROVED", "Đã duyệt"],
+            ["REJECTED", "Từ chối"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              className={bankStatus === value ? "selected" : ""}
+              onClick={() => setBankStatus(value)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         <div className="filters">
           <div className="input-search">
@@ -137,7 +132,11 @@ export function BankAccounts() {
                   <th>Ngân hàng</th>
                   <th>Số tài khoản</th>
                   <th>Chủ tài khoản</th>
-                  <th>Ngày gửi</th>
+                  <th>
+                    {bankStatus === "PENDING_ADMIN"
+                      ? "Ngày gửi"
+                      : "Ngày xét duyệt"}
+                  </th>
                   <th>Trạng thái</th>
                   <th />
                 </tr>
@@ -154,9 +153,15 @@ export function BankAccounts() {
                     <td>{item.bankName || item.bankCode}</td>
                     <td>{maskAccount(item.accountNumber)}</td>
                     <td>{item.accountHolderName}</td>
-                    <td>{date(item.createdAt)}</td>
                     <td>
-                      <Badge status="PENDING_ADMIN" />
+                      {date(
+                        bankStatus === "PENDING_ADMIN"
+                          ? item.createdAt
+                          : item.reviewedAt,
+                      )}
+                    </td>
+                    <td>
+                      <Badge status={item.verificationStatus} />
                     </td>
                     <td>
                       <button
@@ -175,12 +180,8 @@ export function BankAccounts() {
             </table>
           </div>
         ) : (
-          <State empty="Không có tài khoản chờ duyệt" />
+          <State empty="Không có tài khoản trong bộ lọc này" />
         )}
-        <p className="helper inset">
-          Hiển thị toàn bộ danh sách chờ duyệt API trả về. Backend không hỗ trợ
-          phân trang hoặc lịch sử ngân hàng.
-        </p>
       </section>
       {selected && (
         <Modal
@@ -212,7 +213,7 @@ export function BankAccounts() {
                   {review === "approve" ? "Xác nhận duyệt" : "Xác nhận từ chối"}
                 </SubmitButton>
               </>
-            ) : (
+            ) : selected.verificationStatus === "PENDING_ADMIN" ? (
               <>
                 <button
                   className="button danger-outline"
@@ -231,6 +232,13 @@ export function BankAccounts() {
                   Duyệt tài khoản
                 </button>
               </>
+            ) : (
+              <button
+                className="button secondary"
+                onClick={() => setSelected(null)}
+              >
+                Đóng
+              </button>
             )
           }
         >
@@ -278,13 +286,21 @@ export function BankAccounts() {
               <dd>{date(selected.createdAt)}</dd>
             </div>
           </dl>
-          {selected.method === "MOMO" && selected.hasFinancialQr && (
-            <FinancialQr
-              key={selected.reviewToken}
-              id={selected.id}
-              context="bank"
-            />
+          {selected.rejectionReason && (
+            <p>
+              Lý do từ chối: {selected.rejectionReason}
+              {selected.reviewNote ? ` · ${selected.reviewNote}` : ""}
+            </p>
           )}
+          {selected.verificationStatus === "PENDING_ADMIN" &&
+            selected.method === "MOMO" &&
+            selected.hasFinancialQr && (
+              <FinancialQr
+                key={selected.reviewToken}
+                id={selected.id}
+                context="bank"
+              />
+            )}
           {review === "reject" && (
             <div>
               <label>
@@ -341,6 +357,7 @@ export function MoneyList({ base, refund }: PageProps & { refund: boolean }) {
   const [status, setStatus] = useState(""),
     [search, setSearch] = useState("");
   const query = useResource(service.moneyList(refund, refund ? status : ""));
+  const summary = useResource(service.financialSummary(refund));
   const rows =
     query.data?.filter(
       (item) =>
@@ -359,7 +376,7 @@ export function MoneyList({ base, refund }: PageProps & { refund: boolean }) {
   const values = [
     ["Pending", "Chờ xử lý"],
     ["Processing", "Đang xử lý"],
-    ...(refund ? [["Completed", "Hoàn tất"]] : []),
+    ["Completed", "Hoàn tất"],
     ["Failed", "Thất bại"],
   ];
   const visible = rows;
@@ -373,52 +390,57 @@ export function MoneyList({ base, refund }: PageProps & { refund: boolean }) {
             : "Theo dõi hàng đợi chi trả cho Makeup Artist"
         }
         action={
-          <button className="button secondary" onClick={query.reload}>
+          <button
+            className="button secondary"
+            onClick={() => {
+              query.reload();
+              summary.reload();
+            }}
+          >
             <RefreshCw size={15} />
             Làm mới
           </button>
         }
       />
       {actionOnly && (
-        <div className="notice info">
+        <div className="active-filter">
           Đang hiển thị các khoản cần xử lý.
           <button className="text-button" onClick={() => setActionOnly(false)}>
             Xem tất cả
           </button>
         </div>
       )}
-      <div className="notice info">
-        <WalletCards size={17} />
-        Thao tác admin ghi nhận kết quả xử lý. Không tự thực hiện giao dịch
-        chuyển tiền ngân hàng.
-      </div>
       <div className="kpi-grid compact">
         {values.map(([value, label]) => (
           <div className="kpi-card" key={value}>
             <span>{label}</span>
             <strong>
-              {query.loading
+              {summary.loading
                 ? "…"
-                : query.error
+                : summary.error
                   ? "—"
-                  : query.data?.filter(
-                      (x) => statusName(x.status, refund) === value,
-                    ).length || 0}
+                  : (summary.data?.[value.toLowerCase()]?.count ?? "—")}
             </strong>
             <small>
-              {query.loading
+              {summary.loading
                 ? "Đang tải dữ liệu"
-                : query.error
+                : summary.error
                   ? "Không tải được dữ liệu"
-                  : money(
-                      (query.data || [])
-                        .filter((x) => statusName(x.status, refund) === value)
-                        .reduce((sum, x) => sum + x.amount, 0),
-                    )}
+                  : summary.data
+                    ? money(summary.data[value.toLowerCase()].amount)
+                    : "—"}
             </small>
           </div>
         ))}
       </div>
+      {summary.error && (
+        <p className="inline-error" role="alert">
+          {summary.error}{" "}
+          <button className="text-button" onClick={summary.reload}>
+            Thử lại thống kê
+          </button>
+        </p>
+      )}
       <section className="panel list-panel">
         <div className="filters">
           <div className="input-search">
@@ -514,16 +536,7 @@ export function MoneyList({ base, refund }: PageProps & { refund: boolean }) {
         ) : (
           <State empty="Không có giao dịch trong bộ lọc này" />
         )}
-        <p className="helper inset">
-          Hiển thị toàn bộ kết quả của API hiện tại; không có phân trang phía
-          Backend.
-        </p>
       </section>
-      <p className="helper">
-        {refund
-          ? "Không chọn trạng thái: API loại trừ khoản hoàn tất. Chọn Hoàn tất để tải dữ liệu Completed từ Backend. KPI chỉ tính trên kết quả truy vấn hiện tại."
-          : "API chỉ trả hàng đợi Pending, ManualActionRequired, Processing và Failed chưa đối soát. Chưa có API lịch sử đã chi trả; KPI chỉ tính trên hàng đợi này."}
-      </p>
     </>
   );
 }
@@ -637,10 +650,7 @@ export function MoneyDetail({
           <dl className="detail-facts">
             {[
               ["Người nhận", recipient],
-              [
-                "Booking",
-                item.bookingId || "API chưa cung cấp liên kết booking",
-              ],
+              ["Booking", item.bookingId || "Chưa có thông tin booking"],
               [
                 "Ngân hàng",
                 refund
@@ -703,17 +713,6 @@ export function MoneyDetail({
           </div>
           {item.failureMessage && (
             <div className="notice danger">{item.failureMessage}</div>
-          )}
-          <div className="notice info">
-            Hãy thực hiện chuyển tiền và đối soát bên ngoài trước khi xác nhận
-            hoàn tất. Nút này chỉ ghi nhận trạng thái.
-          </div>
-          {refund && (
-            <p className="helper">
-              Backend có thể chặn xử lý thủ công khi nhà cung cấp đang xử lý
-              hoặc tài khoản nhận tiền chưa đủ điều kiện. API chưa trả cờ cho
-              phép từng thao tác; quyết định cuối cùng thuộc Backend.
-            </p>
           )}
           <div className="vertical-actions">
             {actions.map(([value, label]) => (

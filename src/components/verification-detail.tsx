@@ -467,10 +467,6 @@ export function VerificationDetail({ base, id }: PageProps & { id: string }) {
                 </div>
               )}
             </div>
-            <div className="notice neutral">
-              API hiện chỉ trả lần gửi và kết quả gần nhất. Chưa có lịch sử từng
-              phiên bản giấy tờ hoặc lịch sử xét duyệt đầy đủ.
-            </div>
           </div>
         )}
       </section>
@@ -580,11 +576,10 @@ export function VerificationDetail({ base, id }: PageProps & { id: string }) {
           }
         >
           {decision === "approve" ? (
-            <div className="notice info">
-              Thao tác duyệt toàn bộ hồ sơ sẽ kích hoạt MUA nếu đủ điều kiện
-              backend, đồng thời mở lịch mặc định 08:00–22:00 cho các ngày chưa
-              có lịch. Đây chưa phải API xác minh danh tính riêng.
-            </div>
+            <p>
+              Duyệt hồ sơ sẽ kích hoạt MUA đủ điều kiện và mở lịch mặc định
+              08:00–22:00 cho các ngày chưa có lịch.
+            </p>
           ) : (
             <>
               <div className="checkbox-grid">

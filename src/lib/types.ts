@@ -85,6 +85,9 @@ export interface FinancialQr {
   containsRefundAmount?: boolean;
 }
 export interface BankAccount {
+  reviewedAt?: string | null;
+  rejectionReason?: string | null;
+  reviewNote?: string | null;
   id: string;
   reviewToken: string;
   hasFinancialQr: boolean;
@@ -158,6 +161,7 @@ export interface Style {
   createdAt?: string;
 }
 export interface DirectoryUser extends AdminUser {
+  isActive?: boolean;
   avatarUrl?: string | null;
 }
 export interface BankApproval {

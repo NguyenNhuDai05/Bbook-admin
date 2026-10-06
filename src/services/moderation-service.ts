@@ -9,6 +9,7 @@ export type ReportRow = {
   createdAt: string;
 };
 export type ReportDetail = ReportRow & {
+  targetOwnerId?: string;
   description: string;
   content: string | null;
   contentAvailable: boolean;
