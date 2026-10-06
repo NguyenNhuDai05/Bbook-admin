@@ -42,6 +42,7 @@ import { Moderation } from "./moderation-pages";
 import { BankAccounts, MoneyList, MoneyDetail } from "./finance-pages";
 import { Notifications, Directory, PlannedPage, Bookings } from "./other-pages";
 import { Styles } from "./styles-page";
+import { AdminContentLayout, isAdminListRoute } from "./admin-content-layout";
 import referenceCss from "./admin-reference.module.css";
 const groups = [
   {
@@ -344,8 +345,13 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
             </button>
           </div>
         )}
-        <main className="main-content" key={`${key}/${id || ""}`}>
-          {page}
+        <main
+          className={`main-content ${isAdminListRoute(key, id) ? "main-content-list" : "main-content-scrollable"}`}
+          key={`${key}/${id || ""}`}
+        >
+          <AdminContentLayout list={isAdminListRoute(key, id)}>
+            {page}
+          </AdminContentLayout>
         </main>
         <footer className="workspace-footer">
           © {new Date().getFullYear()} B-Book<span>Cổng vận hành nội bộ</span>
