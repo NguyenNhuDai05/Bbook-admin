@@ -1,6 +1,8 @@
 const guid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules = [
+  ["GET", /^admin\/management\/(users|financial-summary)$/],
+  ["GET", /^admin\/bank-accounts\/history$/],
   ["GET", /^admin\/makeup-styles(?:\/[1-9]\d*)?$/],
   ["POST", /^admin\/makeup-styles$/],
   ["PUT", /^admin\/makeup-styles\/[1-9]\d*$/],

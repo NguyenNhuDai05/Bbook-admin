@@ -175,12 +175,6 @@ export function Applications({
           </button>
         }
       />
-      {management && (
-        <div className="notice info">
-          Danh sách sử dụng API hồ sơ MUA. Số booking, rating và lịch sử đình
-          chỉ chưa được API này cung cấp.
-        </div>
-      )}
       <section className="panel list-panel">
         <div className="tabs">
           {[
@@ -304,10 +298,6 @@ export function Applications({
           server
         />
       </section>
-      <p className="helper">
-        Tìm kiếm và bộ lọc khu vực áp dụng trong trang hiện tại. API hiện hỗ trợ
-        phân trang và lọc trạng thái; chưa hỗ trợ tìm kiếm toàn bộ danh sách.
-      </p>
     </>
   );
 }

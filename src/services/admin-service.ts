@@ -77,9 +77,23 @@ export const adminService = {
   activeUser: (id: string, active: boolean) =>
     mutate(
       () => api.activeUser(id, active),
-      ["admin:recipients:", "admin:applications:", `admin:mua:${id}`],
+      [
+        "admin:users:",
+        "admin:recipients:",
+        "admin:applications:",
+        `admin:mua:${id}`,
+      ],
     ),
-  banks: () => query("admin:banks:pending", (signal) => api.banks(signal)),
+  users: (search: string, role: string, active: boolean, page: number) =>
+    query(`admin:users:${search}:${role}:${active}:${page}`, (signal) =>
+      api.users(search, role, active, page, signal),
+    ),
+  financialSummary: (refund: boolean) =>
+    query(`admin:${refund ? "refunds" : "payouts"}:summary`, (signal) =>
+      api.financialSummary(refund, signal),
+    ),
+  banks: (status = "PENDING_ADMIN") =>
+    query(`admin:banks:${status}`, (signal) => api.banks(signal, status)),
   reviewBank: (id: string, approve: boolean, body: BankReviewRequest) =>
     mutate<BankApproval | void>(
       () => (approve ? api.approveBank(id, body) : api.rejectBank(id, body)),

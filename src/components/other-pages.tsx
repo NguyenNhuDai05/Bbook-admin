@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { LockKeyhole, Plus, Search, Send, X } from "lucide-react";
 import { useResource, useSubmission } from "@/lib/client";
 import { adminService as service } from "@/services/admin-service";
@@ -375,10 +376,12 @@ export function Notifications() {
   );
 }
 export function Directory() {
+  const params = useSearchParams();
+  const [active, setActive] = useState(true);
   const submission = useSubmission();
   const { busy } = submission;
   const [role, setRole] = useState(""),
-    [search, setSearch] = useState(""),
+    [search, setSearch] = useState(params.get("search") || ""),
     [debounced, setDebounced] = useState(""),
     [page, setPage] = useState(1),
     [selected, setSelected] = useState<DirectoryUser | null>(null),
@@ -391,16 +394,18 @@ export function Directory() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
-  const query = useResource(service.recipients(debounced, role, page));
+  const query = useResource(service.users(debounced, role, active, page));
   async function lock() {
     if (!selected) return;
     if (!submission.begin()) return;
     setError("");
     setNotice("");
     try {
-      await service.activeUser(selected.userId, false);
+      await service.activeUser(selected.userId, !selected.isActive);
       setSelected(null);
-      setNotice("Đã khóa tài khoản.");
+      setNotice(
+        selected.isActive ? "Đã khóa tài khoản." : "Đã mở khóa tài khoản.",
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Không thể khóa tài khoản.",
@@ -413,18 +418,13 @@ export function Directory() {
     <>
       <PageTitle
         title="Người dùng"
-        description="Tra cứu người dùng đang hoạt động và quản lý quyền truy cập"
+        description="Tra cứu Customer, MUA và quản lý quyền truy cập"
       />
       {notice && (
         <div className="notice success" role="status">
           {notice}
         </div>
       )}
-      <div className="notice neutral">
-        Danh sách dùng API tìm người nhận thông báo, chỉ trả tài khoản đang hoạt
-        động. Danh sách tài khoản đã khóa và hồ sơ người dùng chi tiết chưa có
-        API.
-      </div>
       <section className="panel">
         <div className="tabs">
           {[
@@ -433,17 +433,25 @@ export function Directory() {
             ["MUA", "MUA"],
           ].map(([value, label]) => (
             <button
-              className={role === value ? "selected" : ""}
+              className={active && role === value ? "selected" : ""}
               key={label}
               onClick={() => {
                 setRole(value);
+                setActive(true);
                 setPage(1);
               }}
             >
               {label}
             </button>
           ))}
-          <button disabled title="Chưa có API danh sách tài khoản đã khóa">
+          <button
+            className={!active ? "selected" : ""}
+            onClick={() => {
+              setActive(false);
+              setRole("");
+              setPage(1);
+            }}
+          >
             Đã khóa
           </button>
         </div>
@@ -454,7 +462,7 @@ export function Directory() {
               aria-label="Tìm người dùng"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm tên, email hoặc số điện thoại…"
+              placeholder="Tìm tên, email hoặc mã tài khoản…"
             />
           </div>
         </div>
@@ -485,7 +493,7 @@ export function Directory() {
                     <td>{user.role}</td>
                     <td>{user.email}</td>
                     <td>
-                      <Badge status="Active" />
+                      <Badge status={user.isActive ? "Active" : "Inactive"} />
                     </td>
                     <td>
                       <button
@@ -496,7 +504,7 @@ export function Directory() {
                         }}
                       >
                         <LockKeyhole size={14} />
-                        Khóa tài khoản
+                        {user.isActive ? "Khóa tài khoản" : "Mở khóa"}
                       </button>
                     </td>
                   </tr>
@@ -517,7 +525,7 @@ export function Directory() {
       </section>
       {selected && (
         <Modal
-          title="Khóa tài khoản?"
+          title={selected.isActive ? "Khóa tài khoản?" : "Mở khóa tài khoản?"}
           description={selected.fullName}
           onClose={() => {
             if (!busy) setSelected(null);
@@ -532,15 +540,15 @@ export function Directory() {
                 Hủy
               </button>
               <SubmitButton busy={busy} onClick={lock}>
-                Xác nhận khóa
+                {selected.isActive ? "Xác nhận khóa" : "Xác nhận mở khóa"}
               </SubmitButton>
             </>
           }
         >
-          <p>Tài khoản sẽ bị vô hiệu hóa theo quy tắc backend.</p>
-          <p className="helper">
-            API mở khóa đã có, nhưng màn tra cứu tài khoản đã khóa cần API bổ
-            sung để sử dụng an toàn.
+          <p>
+            {selected.isActive
+              ? "Tài khoản sẽ không thể đăng nhập hoặc sử dụng các chức năng yêu cầu đăng nhập."
+              : "Tài khoản sẽ được khôi phục quyền đăng nhập. Điều kiện hoạt động của MUA vẫn được kiểm tra riêng."}
           </p>
           {error && (
             <p className="inline-error" role="alert">
@@ -571,13 +579,6 @@ export function PlannedPage({ kind }: { kind: string }) {
           }
         />
       </section>
-      {!activity && (
-        <div className="notice neutral">
-          Kết nối API được cấu hình bằng BACKEND_API_URL phía server. Đăng nhập
-          sử dụng JWT Backend trong cookie HttpOnly. Không có chức năng lưu cài
-          đặt giả.
-        </div>
-      )}
     </>
   );
 }
@@ -610,13 +611,8 @@ export function Bookings({ id }: PageProps & { id?: string }) {
         description="Quản lý đơn đặt lịch và tranh chấp"
       />
       <section className="panel">
-        <State empty="Chức năng quản lý danh sách booking cần API hỗ trợ." />
+        <State empty="Danh sách booking đang được hoàn thiện." />
       </section>
-      <p className="helper">
-        GET /Booking và GET /Booking/{"{id}"} chỉ trả booking liên quan đến tài
-        khoản đang đăng nhập. Backend chưa cung cấp danh sách, chi tiết hoặc
-        bằng chứng tranh chấp cho Admin trên toàn hệ thống.
-      </p>
       <button
         className="button secondary"
         disabled
