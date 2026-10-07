@@ -418,11 +418,23 @@
   gap: 9px;
   margin: 20px 0;
 }
-.ratingDistribution > div {
+.ratingDistribution > button {
   display: flex;
   align-items: center;
   gap: 12px;
   font-size: 11px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.ratingDistribution > button:hover,
+.ratingDistribution > button[aria-pressed="true"] {
+  background: var(--pink-soft);
+  border-color: #f3c0d3;
 }
 .ratingDistribution span {
   display: flex;
@@ -439,10 +451,111 @@
   color: #b86b00;
 }
 .recentHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 14px 0 8px;
   border-top: 1px solid var(--border);
   font-weight: 600;
   font-size: 12px;
+}
+.recentReviews {
+  height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.reviewRow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 8px;
+  border: 0;
+  border-bottom: 1px solid #f0f2f5;
+  background: white;
+  color: inherit;
+  cursor: pointer;
+}
+.reviewRow:hover {
+  background: #fff7fa;
+}
+.reviewRowHeading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.linePlot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.chartTabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.chartTabs button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.chartTabs button[aria-selected="true"] {
+  background: var(--pink-soft);
+  color: #b82560;
+  border-color: #f3c0d3;
+}
+.reviewDetail {
+  display: grid;
+  gap: 18px;
+}
+.reviewDetail > .rating {
+  justify-content: space-between;
+}
+.reviewDetail dl {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+}
+.reviewDetail dt {
+  color: var(--muted);
+}
+.reviewDetail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.reviewDetail dd small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.reviewContent {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+  line-height: 1.7;
+}
+.reply {
+  background: #fff7fa;
+  padding: 16px;
+  border-radius: 10px;
+}
+.reply h3 {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.emptyImage {
+  color: var(--muted);
+  font-size: 13px;
 }
 .recentReviews article {
   padding: 10px 0;

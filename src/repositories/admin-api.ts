@@ -1,5 +1,10 @@
 import { request } from "@/lib/client";
-import { validateDashboard, type DashboardData } from "@/lib/dashboard";
+import {
+  validateDashboard,
+  type DashboardData,
+  type DashboardReview,
+  type DashboardReviewDetail,
+} from "@/lib/dashboard";
 import { assertArray, assertPaged } from "@/lib/contracts.mjs";
 import type {
   Application,
@@ -42,6 +47,25 @@ async function paged<T>(
   ) as Paged<T>;
 }
 export const adminApi = {
+  dashboardReviews: (
+    from: string,
+    to: string,
+    rating: number,
+    page: number,
+    signal: AbortSignal,
+  ) =>
+    paged<DashboardReview>(
+      `admin/dashboard/reviews?${params({ from, to, page, pageSize: 20, ...(rating ? { rating } : {}) })}`,
+      ["reviewId", "bookingId", "rating", "createdAt", "hasImage"],
+      signal,
+    ),
+  dashboardReview: (id: string, signal: AbortSignal) =>
+    request<DashboardReviewDetail>(
+      `admin/dashboard/reviews/${id}`,
+      "GET",
+      undefined,
+      signal,
+    ),
   adminStyles: (
     page: number,
     search: string,
