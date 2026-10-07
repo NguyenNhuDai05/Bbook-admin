@@ -31,6 +31,16 @@ async function mutateStyle<T>(action: () => Promise<T>, prefixes: string[]) {
   return result;
 }
 export const adminService = {
+  dashboardReviews: (from: string, to: string, rating: number, page: number) =>
+    query(`admin:dashboard:reviews:${from}:${to}:${rating}:${page}`, (signal) =>
+      api.dashboardReviews(from, to, rating, page, signal),
+    ),
+  dashboardReview: (id: string) =>
+    query(
+      `admin:dashboard:review:${id}`,
+      (signal) => api.dashboardReview(id, signal),
+      !!id,
+    ),
   adminStyles: (page: number, search: string, status: string) =>
     query(`admin:style-catalog:list:${page}:${status}:${search}`, (signal) =>
       api.adminStyles(page, search, status, signal),

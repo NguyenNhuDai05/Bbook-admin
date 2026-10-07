@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   AlertCircle,
   ChevronLeft,
@@ -157,6 +157,7 @@ export function Modal({
   className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
@@ -172,11 +173,11 @@ export function Modal({
         event.preventDefault();
         onClose();
       }}
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
     >
       <div className="modal-heading">
         <div>
-          <h2 id="dialog-title">{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           {description && <p>{description}</p>}
         </div>
         <button className="icon-button" onClick={onClose} aria-label="Đóng">
@@ -210,9 +211,11 @@ export function SubmitButton({
 export function DocumentView({
   url,
   label,
+  description = "Thông tin nhạy cảm — chỉ sử dụng cho mục đích xác minh.",
 }: {
   url?: string | null;
   label: string;
+  description?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -274,7 +277,7 @@ export function DocumentView({
       {open && (
         <Modal
           title={label}
-          description="Thông tin nhạy cảm — chỉ sử dụng cho mục đích xác minh."
+          description={description}
           wide
           onClose={() => setOpen(false)}
         >

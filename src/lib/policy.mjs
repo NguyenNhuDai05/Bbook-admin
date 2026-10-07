@@ -12,6 +12,8 @@ const rules = [
   ["GET", new RegExp(`^admin/moderation/reports/${guid}/image$`)],
   ["POST", new RegExp(`^admin/moderation/reports/${guid}/decision$`)],
   ["GET", /^admin\/dashboard$/],
+  ["GET", /^admin\/dashboard\/reviews$/],
+  ["GET", new RegExp(`^admin/dashboard/reviews/${guid}$`)],
   ["GET", /^admin\/work-summary$/],
   ["GET", /^admin\/feedback$/],
   ["GET", new RegExp(`^admin/feedback/${guid}$`)],

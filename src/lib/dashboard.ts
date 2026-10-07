@@ -8,6 +8,33 @@ export interface DashboardPeriod {
   depositsCollected: number;
   refundsCompleted: number;
 }
+export interface DashboardReview {
+  reviewId: string;
+  bookingId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  customerName: string | null;
+  muaName: string | null;
+  hasImage: boolean;
+}
+export interface DashboardReviewDetail extends Omit<
+  DashboardReview,
+  "hasImage"
+> {
+  imageUrl: string | null;
+  muaReply: string | null;
+  muaReplyAt: string | null;
+  customerId: string;
+  muaId: string;
+  booking: {
+    bookingDate: string;
+    startTime: string;
+    status: string;
+    totalAmount: number;
+    services: { serviceName: string; participantsCount: number }[];
+  };
+}
 export interface DashboardData {
   current: DashboardPeriod;
   previous: DashboardPeriod;

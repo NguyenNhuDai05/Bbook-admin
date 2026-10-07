@@ -10,33 +10,27 @@ import {
   ChevronRight,
   ArrowUp,
   ArrowDown,
-  Star,
   Users,
 } from "lucide-react";
 import { invalidateResources, useResource } from "@/lib/client";
 import { adminService } from "@/services/admin-service";
-import { money, shortId } from "@/lib/format";
+import { money } from "@/lib/format";
 import type { DashboardData } from "@/lib/dashboard";
 import {
   bookingLabels,
   bookingColors,
   comparison,
-  currencyAxis,
   presetRange,
   validRange,
 } from "@/lib/dashboard-presentation.mjs";
 import { useWorkSummary, workModules } from "./work-summary";
 import { Pagination } from "./ui";
 import s from "./dashboard.module.css";
+import { RevenueChart, NewUsersChart } from "./dashboard-charts";
+import { ServiceReviews } from "./dashboard-reviews";
 
 const num = (value: number) => value.toLocaleString("vi-VN");
 const day = (value: string) => value.split("-").reverse().join("/");
-const timestamp = (value: string) =>
-  new Intl.DateTimeFormat("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
 function Skeleton() {
   return (
     <div
@@ -74,92 +68,6 @@ function SectionError({
         Thử lại
       </button>
     </div>
-  );
-}
-function RevenueChart({ data }: { data: DashboardData }) {
-  const [active, setActive] = useState<string | null>(null);
-  const max = Math.max(...data.daily.map((x) => x.revenue), 0);
-  const ceiling =
-    max > 0
-      ? Math.ceil(max / 10 ** Math.floor(Math.log10(max))) *
-        10 ** Math.floor(Math.log10(max))
-      : 0;
-  const row = data.daily.find((x) => x.date === active);
-  const interval = Math.max(1, Math.ceil(data.daily.length / 7));
-  return (
-    <section className={s.card}>
-      <div className={s.heading}>
-        <div>
-          <h2>Doanh thu theo ngày</h2>
-          <p>Phí nền tảng ghi nhận khi booking hoàn thành · VND</p>
-        </div>
-      </div>
-      {max === 0 ? (
-        <div className={s.chartEmpty}>
-          Chưa có dữ liệu trong khoảng thời gian này.
-        </div>
-      ) : (
-        <div
-          className={s.chart}
-          role="group"
-          aria-label={`Doanh thu theo ngày, ${data.daily.length} ngày; mỗi cột có số tiền bằng VND`}
-        >
-          <div className={s.yAxis}>
-            {[1, 0.75, 0.5, 0.25, 0].map((x) => (
-              <span key={x}>{currencyAxis(ceiling * x)}</span>
-            ))}
-          </div>
-          <div className={s.plot}>
-            <div className={s.gridlines} aria-hidden="true">
-              {[0, 1, 2, 3, 4].map((x) => (
-                <i key={x} />
-              ))}
-            </div>
-            <div
-              className={s.bars}
-              style={{ gap: `${Math.min(3, 30 / data.daily.length)}%` }}
-            >
-              {data.daily.map((x) => (
-                <button
-                  type="button"
-                  key={x.date}
-                  className={s.barColumn}
-                  aria-label={`${day(x.date)}: ${money(x.revenue)}`}
-                  onMouseEnter={() => setActive(x.date)}
-                  onMouseLeave={() => setActive(null)}
-                  onFocus={() => setActive(x.date)}
-                  onBlur={() => setActive(null)}
-                  onClick={() => setActive(x.date)}
-                >
-                  <span style={{ height: `${(x.revenue / ceiling) * 100}%` }} />
-                </button>
-              ))}
-            </div>
-            <div className={s.xAxis}>
-              {data.daily.map(
-                (x, i) =>
-                  (i % interval === 0 || i === data.daily.length - 1) && (
-                    <span
-                      key={x.date}
-                      style={{
-                        left: `${((i + 0.5) / data.daily.length) * 100}%`,
-                      }}
-                    >
-                      {day(x.date).slice(0, 5)}
-                    </span>
-                  ),
-              )}
-            </div>
-          </div>
-          {row && (
-            <div className={s.tooltip} role="status">
-              {day(row.date)}
-              <strong>{money(row.revenue)}</strong>
-            </div>
-          )}
-        </div>
-      )}
-    </section>
   );
 }
 function BookingBreakdown({ data }: { data: DashboardData }) {
@@ -276,91 +184,6 @@ function WorkQueue() {
           </div>
         )
       )}
-    </section>
-  );
-}
-function ServiceReviews({ data }: { data: DashboardData }) {
-  const reviews = data.serviceReviews;
-  return (
-    <section className={s.card}>
-      <div className={s.heading}>
-        <div>
-          <h2>Đánh giá dịch vụ</h2>
-          <p>Customer đánh giá MUA sau booking · Đánh giá được tạo trong kỳ</p>
-        </div>
-        <Star size={18} />
-      </div>
-      {reviews.total === 0 ? (
-        <div className={s.reviewEmpty}>
-          Chưa có đánh giá dịch vụ trong khoảng thời gian này.
-        </div>
-      ) : (
-        <>
-          <div className={s.reviewSummary}>
-            <div>
-              <strong>
-                {reviews.averageRating!.toLocaleString("vi-VN", {
-                  maximumFractionDigits: 1,
-                })}
-                <small> / 5</small>
-              </strong>
-              <span>{num(reviews.total)} lượt đánh giá</span>
-            </div>
-            <div className={s.lowRating}>
-              <b>{num(reviews.lowRatingCount)}</b>
-              <span>Đánh giá thấp ≤ 2 sao</span>
-            </div>
-          </div>
-          <div className={s.ratingDistribution}>
-            {reviews.distribution.map((x) => (
-              <div key={x.rating}>
-                <span>
-                  {x.rating} <Star size={12} aria-hidden="true" />
-                </span>
-                <progress
-                  max={reviews.total}
-                  value={x.count}
-                  aria-label={`${x.rating} sao: ${x.count} đánh giá`}
-                />
-                <b>{num(x.count)}</b>
-              </div>
-            ))}
-          </div>
-          <div className={s.recentHeading}>Đánh giá gần đây</div>
-          <div className={s.recentReviews}>
-            {reviews.recent.map((x) => (
-              <article key={x.reviewId}>
-                <div>
-                  <b>{x.customerName || "Khách hàng"}</b>
-                  <span className={s.rating}>
-                    {x.rating} <Star size={12} />
-                  </span>
-                </div>
-                <p>{x.comment || "Đánh giá không kèm nhận xét"}</p>
-                <small>
-                  {x.muaName || "Makeup Artist"} · {timestamp(x.createdAt)}
-                </small>
-                <span className={s.bookingLink}>
-                  Booking #{shortId(x.bookingId)}
-                </span>
-              </article>
-            ))}
-          </div>
-        </>
-      )}
-      <div className={s.coverage}>
-        <span>Booking hoàn thành trong kỳ có đánh giá</span>
-        <b>
-          {reviews.eligibleCompletedBookings === 0
-            ? "—"
-            : `${((reviews.reviewedCompletedBookings / reviews.eligibleCompletedBookings) * 100).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`}
-        </b>
-        <small>
-          {num(reviews.reviewedCompletedBookings)} /{" "}
-          {num(reviews.eligibleCompletedBookings)} booking · Tính theo ngày hoàn
-          thành; đánh giá có thể được gửi sau kỳ
-        </small>
-      </div>
     </section>
   );
 }
@@ -520,14 +343,19 @@ export function OperationsDashboard() {
           </div>
           <div className={s.analytics}>
             <RevenueChart data={data} />
-            <BookingBreakdown data={data} />
+            <NewUsersChart data={data} />
           </div>
         </>
       )}
       <div className={s.operations}>
         <WorkQueue />
         {data ? (
-          <ServiceReviews data={data} />
+          <ServiceReviews
+            key={`${range.from}:${range.to}`}
+            data={data}
+            from={range.from}
+            to={range.to}
+          />
         ) : resource.loading ? (
           <div className={s.skeletonChart} />
         ) : (
@@ -539,6 +367,7 @@ export function OperationsDashboard() {
       </div>
       {data && (
         <>
+          <BookingBreakdown data={data} />
           <section className={s.systemOverview}>
             <Users size={18} />
             <b>{num(data.users.total)} người dùng</b>
