@@ -26,3 +26,20 @@ test("review list and GUID detail are read-only and reject arbitrary subpaths", 
   ])
     assert.equal(allowedApiPath("GET", path), false);
 });
+test("transaction history and detail expose only explicit GET routes", () => {
+  const id = "12345678-1234-1234-1234-123456789abc";
+  for (const path of [
+    "admin/dashboard/transactions",
+    `admin/dashboard/transactions/${id}`,
+  ]) {
+    assert.equal(allowedApiPath("GET", path), true);
+    for (const method of ["POST", "PUT", "DELETE", "PATCH"])
+      assert.equal(allowedApiPath(method, path), false);
+  }
+  for (const path of [
+    "admin/dashboard/transactions/all",
+    `admin/dashboard/transactions/${id}/webhook`,
+    "admin/dashboard/transactions/../users",
+  ])
+    assert.equal(allowedApiPath("GET", path), false);
+});

@@ -4,6 +4,8 @@ import {
   type DashboardData,
   type DashboardReview,
   type DashboardReviewDetail,
+  type DashboardTransaction,
+  type DashboardTransactionDetail,
 } from "@/lib/dashboard";
 import { assertArray, assertPaged } from "@/lib/contracts.mjs";
 import type {
@@ -47,6 +49,31 @@ async function paged<T>(
   ) as Paged<T>;
 }
 export const adminApi = {
+  dashboardTransactions: (
+    from: string,
+    to: string,
+    page: number,
+    signal: AbortSignal,
+  ) =>
+    paged<DashboardTransaction>(
+      `admin/dashboard/transactions?${params({ page, pageSize: 20, ...(from && to ? { from, to } : {}) })}`,
+      [
+        "paymentId",
+        "bookingId",
+        "amount",
+        "paidAt",
+        "status",
+        "providerOrderCode",
+      ],
+      signal,
+    ),
+  dashboardTransaction: (id: string, signal: AbortSignal) =>
+    request<DashboardTransactionDetail>(
+      `admin/dashboard/transactions/${id}`,
+      "GET",
+      undefined,
+      signal,
+    ),
   dashboardReviews: (
     from: string,
     to: string,

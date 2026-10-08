@@ -10,11 +10,24 @@ export function presetRange(preset, today = vietnamToday()) {
   const days = { today: 1, week: 7, month: 30 }[preset];
   return {
     from:
-      preset === "this-month"
-        ? `${today.slice(0, 7)}-01`
-        : shiftDay(today, 1 - days),
+      preset === "this-year"
+        ? `${today.slice(0, 4)}-01-01`
+        : preset === "this-month"
+          ? `${today.slice(0, 7)}-01`
+          : shiftDay(today, 1 - days),
     to: today,
   };
+}
+export function calendarRange(value) {
+  if (!/^\d{4}(-\d{2})?$/.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const month = value.length === 7 ? Number(value.slice(5)) : 1;
+  if (year < 1970 || year > 9998 || month < 1 || month > 12) return null;
+  const from = `${value}-01${value.length === 4 ? "-01" : ""}`;
+  const to = new Date(Date.UTC(year, value.length === 7 ? month : 12, 0))
+    .toISOString()
+    .slice(0, 10);
+  return { from, to };
 }
 export function validRange(from, to) {
   const days = (Date.parse(to) - Date.parse(from)) / 86400000;
