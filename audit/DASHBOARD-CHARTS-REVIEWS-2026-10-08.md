@@ -7,6 +7,7 @@ Implemented in the local Admin and backend repositories on 2026-10-08.
 - Recent reviews have a 280px independently scrollable list, 20-item pagination and clickable star filters. Filtering happens on the server before pagination, across the selected date range.
 - A review opens a detail dialog with its full comment, attached image viewer, customer, MUA name/ID, booking ID, appointment, status, value, services and MUA reply. The existing review model supports one attached image.
 - Removed and demo reviews remain excluded. Names of deleted accounts remain redacted.
+- Added a top summary row with service review count, average score (empty periods display an em dash), and successful PayOS payment count. The count uses PaidAt within the Vietnam date range, excludes demo bookings and includes payments subsequently refunded, consistent with the existing depositsCollected metric. It counts payment records, not bookings, refunds, or wallet ledger entries. The dashboard API adds successfulTransactions to current/previous; deploy backend before this frontend because response validation requires the field.
 
 ## API and rollout
 
@@ -20,3 +21,11 @@ Added Admin-only, non-cacheable GET endpoints under `/api/admin/dashboard/review
 - Backend targeted dashboard tests: 10 passed, 2 existing PostgreSQL integration tests skipped because their dedicated test database is not configured.
 - Review tests exercise date and star filtering before pagination, detail fields, image and reply, removed/missing reviews, deleted customer redaction, invalid inputs and Admin authorization metadata.
 - Authenticated live browser interaction and production PostgreSQL execution were not verified in this session.
+
+## Top KPI follow-up
+
+## Tooltip and layout follow-up
+
+Chart pointer movement now selects the nearest calendar day across the plot, with a vertical guide, a circular active marker and a tooltip positioned near the point and clamped inside the plot edges. Focus and click interactions remain available. The operations column stacks work queues and booking status, while the review card stretches alongside it and keeps its review list independently scrollable. Rating distribution spacing is reduced. No backend changes are required for this follow-up.
+
+The new transaction count has strict nonnegative integer validation in the frontend. The PostgreSQL statistics fixture covers paid and subsequently refunded payments, previous-period payments, demo bookings, the exclusive end boundary and pending payments. Backend build passed (three pre-existing warnings); the dashboard test filter passed 10 tests and skipped 3 database-dependent tests. No live deployment was performed.
