@@ -37,6 +37,12 @@ export interface DashboardReviewDetail extends Omit<
   };
 }
 export interface DashboardData {
+  lifetime: {
+    revenue: number;
+    reviewCount: number;
+    averageRating: number | null;
+    successfulTransactions: number;
+  };
   current: DashboardPeriod;
   previous: DashboardPeriod;
   users: { total: number; customers: number; muas: number; locked: number };
@@ -82,6 +88,17 @@ export function validateDashboard(value: DashboardData): DashboardData {
   ];
   if (
     !value ||
+    !valid(value.lifetime?.revenue) ||
+    !Number.isInteger(value.lifetime?.reviewCount) ||
+    value.lifetime.reviewCount < 0 ||
+    !Number.isInteger(value.lifetime?.successfulTransactions) ||
+    value.lifetime.successfulTransactions < 0 ||
+    (value.lifetime.reviewCount === 0
+      ? value.lifetime.averageRating !== null
+      : typeof value.lifetime.averageRating !== "number" ||
+        !Number.isFinite(value.lifetime.averageRating) ||
+        value.lifetime.averageRating < 1 ||
+        value.lifetime.averageRating > 5) ||
     !fields.every(
       (k) => valid(value.current?.[k]) && valid(value.previous?.[k]),
     ) ||
@@ -150,4 +167,32 @@ export function validateDashboard(value: DashboardData): DashboardData {
   )
     throw new Error("Dữ liệu thống kê Backend không hợp lệ.");
   return value;
+}
+
+export interface DashboardTransaction {
+  paymentId: string;
+  bookingId: string;
+  amount: number;
+  paidAt: string;
+  status: string;
+  providerOrderCode: number;
+  customerName: string | null;
+}
+export interface DashboardTransactionDetail extends DashboardTransaction {
+  customerId: string;
+  createdAt: string;
+  updatedAt: string;
+  refundedAt: string | null;
+  refundRequestedAt: string | null;
+  provider: string;
+  providerReference: string | null;
+  muaName: string | null;
+  booking: DashboardReviewDetail["booking"] & { muaId: string };
+  refunds: {
+    refundId: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+    completedAt: string | null;
+  }[];
 }

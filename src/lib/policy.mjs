@@ -13,6 +13,8 @@ const rules = [
   ["POST", new RegExp(`^admin/moderation/reports/${guid}/decision$`)],
   ["GET", /^admin\/dashboard$/],
   ["GET", /^admin\/dashboard\/reviews$/],
+  ["GET", /^admin\/dashboard\/transactions$/],
+  ["GET", new RegExp(`^admin/dashboard/transactions/${guid}$`)],
   ["GET", new RegExp(`^admin/dashboard/reviews/${guid}$`)],
   ["GET", /^admin\/work-summary$/],
   ["GET", /^admin\/feedback$/],

@@ -9,6 +9,7 @@ import {
   validRange,
   vietnamToday,
   bookingLabels,
+  calendarRange,
 } from "../src/lib/dashboard-presentation.mjs";
 test("Vietnam calendar and inclusive presets cross month boundaries", () => {
   assert.equal(vietnamToday(Date.parse("2026-09-30T18:00:00Z")), "2026-10-01");
@@ -35,6 +36,30 @@ test("custom date validation preserves backend range limit", () => {
   assert.equal(validRange("2024-01-01", "2025-01-01"), false);
   assert.equal(validRange("2026-10-07", "2026-10-01"), false);
   assert.equal(validRange("invalid", "2026-10-01"), false);
+});
+test("calendar month and year filters include the full period and leap day", () => {
+  assert.deepEqual(calendarRange("2024-02"), {
+    from: "2024-02-01",
+    to: "2024-02-29",
+  });
+  assert.deepEqual(calendarRange("2026-12"), {
+    from: "2026-12-01",
+    to: "2026-12-31",
+  });
+  assert.deepEqual(calendarRange("2024"), {
+    from: "2024-01-01",
+    to: "2024-12-31",
+  });
+  assert.deepEqual(presetRange("this-year", "2026-10-08"), {
+    from: "2026-01-01",
+    to: "2026-10-08",
+  });
+  assert.equal(
+    validRange(calendarRange("2024").from, calendarRange("2024").to),
+    true,
+  );
+  for (const value of ["2026-00", "2026-13", "1969", "abc", "2026-1"])
+    assert.equal(calendarRange(value), null);
 });
 test("dashboard contract rejects missing metrics and inconsistent reviews instead of showing zero", async () => {
   const source = await readFile(
@@ -74,6 +99,12 @@ test("dashboard contract rejects missing metrics and inconsistent reviews instea
     recent: [],
   };
   const data = {
+    lifetime: {
+      revenue: 6400000,
+      reviewCount: 1,
+      averageRating: 2,
+      successfulTransactions: 1,
+    },
     current: period,
     previous: period,
     users: { total: 2, customers: 1, muas: 1, locked: 0 },
@@ -90,6 +121,19 @@ test("dashboard contract rejects missing metrics and inconsistent reviews instea
     serviceReviews: reviews,
   };
   assert.equal(validateDashboard(data), data);
+  assert.throws(() => validateDashboard({ ...data, lifetime: undefined }));
+  assert.throws(() =>
+    validateDashboard({
+      ...data,
+      lifetime: { ...data.lifetime, averageRating: 0 },
+    }),
+  );
+  assert.throws(() =>
+    validateDashboard({
+      ...data,
+      lifetime: { ...data.lifetime, successfulTransactions: 1.5 },
+    }),
+  );
   for (const successfulTransactions of [undefined, -1, 1.5, NaN]) {
     assert.throws(() =>
       validateDashboard({

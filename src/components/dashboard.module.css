@@ -83,6 +83,81 @@
 .reviewKpis {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+.lifetimeKpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.lifetimeKpis strong {
+  font-size: clamp(20px, 1.6vw, 30px);
+  overflow-wrap: anywhere;
+}
+.summaryHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.summaryHeading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.summaryHeading span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.clickableKpi {
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.clickableKpi:hover,
+.clickableKpi:focus-visible {
+  border-color: #ed5590;
+  background: #fff8fb;
+}
+.calendarPicker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.calendarPicker input,
+.calendarPicker select {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+}
+.transactionAmount {
+  font-size: 28px;
+}
+.reply small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.transactionTable {
+  max-height: 440px;
+  overflow: auto;
+  margin-top: 16px;
+}
+.transactionTable small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.chartTabs button[aria-pressed="true"] {
+  background: var(--pink-soft);
+  color: #cf2f70;
+  border-color: #f3c0d3;
+}
+@media (min-width: 1001px) and (max-width: 1350px) {
+  .lifetimeKpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 .kpi,
 .card,
 .daily {
@@ -790,6 +865,10 @@
   }
 }
 @media (max-width: 560px) {
+  .summaryHeading {
+    flex-direction: column;
+    gap: 6px;
+  }
   .kpis {
     grid-template-columns: 1fr;
   }

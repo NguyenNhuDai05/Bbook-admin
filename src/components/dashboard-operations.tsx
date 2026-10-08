@@ -25,12 +25,15 @@ import {
   comparison,
   presetRange,
   validRange,
+  calendarRange,
+  vietnamToday,
 } from "@/lib/dashboard-presentation.mjs";
 import { useWorkSummary, workModules } from "./work-summary";
 import { Pagination } from "./ui";
 import s from "./dashboard.module.css";
 import { RevenueChart, NewUsersChart } from "./dashboard-charts";
 import { ServiceReviews } from "./dashboard-reviews";
+import { TransactionHistory } from "./dashboard-transactions";
 
 const num = (value: number) => value.toLocaleString("vi-VN");
 const day = (value: string) => value.split("-").reverse().join("/");
@@ -200,6 +203,9 @@ export function OperationsDashboard() {
     retainData: true,
   });
   const data = resource.data;
+  const [transactionScope, setTransactionScope] = useState<
+    "all" | "period" | null
+  >(null);
   const days = (Date.parse(range.to) - Date.parse(range.from)) / 86400000 + 1;
   const daily = data
     ? [...data.daily].sort((a, b) => b.date.localeCompare(a.date))
@@ -237,7 +243,12 @@ export function OperationsDashboard() {
                 setPreset(e.target.value);
                 setError("");
                 if (e.target.value !== "custom") {
-                  const next = presetRange(e.target.value);
+                  const next =
+                    e.target.value === "pick-month"
+                      ? calendarRange(range.from.slice(0, 7))!
+                      : e.target.value === "pick-year"
+                        ? calendarRange(range.from.slice(0, 4))!
+                        : presetRange(e.target.value);
                   setRange(next);
                   setDraft(next);
                   setPage(1);
@@ -248,6 +259,9 @@ export function OperationsDashboard() {
               <option value="week">7 ngày gần đây</option>
               <option value="month">30 ngày gần đây</option>
               <option value="this-month">Tháng này</option>
+              <option value="this-year">Năm nay</option>
+              <option value="pick-month">Chọn tháng</option>
+              <option value="pick-year">Chọn năm</option>
               <option value="custom">Tùy chỉnh khoảng ngày</option>
             </select>
           </label>
@@ -263,6 +277,133 @@ export function OperationsDashboard() {
           </button>
         </div>
       </header>
+      {data && (
+        <>
+          <div className={s.summaryHeading}>
+            <h2>Tổng tích lũy</h2>
+            <span>
+              Người dùng và MUA: hiện tại · Doanh thu, đánh giá, giao dịch: từ
+              đầu đến nay
+            </span>
+          </div>
+          <div className={`${s.kpis} ${s.lifetimeKpis}`}>
+            <section className={s.kpi}>
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <Users size={16} />
+                </span>
+                Tổng người dùng
+              </div>
+              <strong>{num(data.users.total)}</strong>
+              <span className={s.delta}>
+                Tài khoản hiện tại, gồm Customer và MUA
+              </span>
+            </section>
+            <section className={s.kpi}>
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <Sparkles size={16} />
+                </span>
+                Tổng Makeup Artist
+              </div>
+              <strong>{num(data.users.muas)}</strong>
+              <span className={s.delta}>Tài khoản hiện mang vai trò MUA</span>
+            </section>
+            <section className={s.kpi}>
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <Coins size={16} />
+                </span>
+                Tổng doanh thu
+              </div>
+              <strong>{money(data.lifetime.revenue)}</strong>
+              <span className={s.delta}>
+                Phí nền tảng trên booking hoàn thành
+              </span>
+            </section>
+            <section className={s.kpi}>
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <Star size={16} />
+                </span>
+                Tổng đánh giá dịch vụ
+              </div>
+              <strong>{num(data.lifetime.reviewCount)}</strong>
+              <span className={s.delta}>
+                Điểm bình quân:{" "}
+                {data.lifetime.averageRating === null
+                  ? "—"
+                  : `${data.lifetime.averageRating.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} / 5`}
+              </span>
+            </section>
+            <button
+              type="button"
+              className={`${s.kpi} ${s.clickableKpi}`}
+              onClick={() => setTransactionScope("all")}
+            >
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <ArrowLeftRight size={16} />
+                </span>
+                Tổng giao dịch thanh toán
+              </div>
+              <strong>{num(data.lifetime.successfulTransactions)}</strong>
+              <span className={s.delta}>
+                Xem lịch sử và chi tiết <ChevronRight size={14} />
+              </span>
+            </button>
+          </div>
+        </>
+      )}
+      <div className={s.summaryHeading}>
+        <h2>Thống kê theo kỳ</h2>
+        <span>
+          Bộ lọc ngày, tháng, năm áp dụng cho các số liệu và biểu đồ bên dưới
+        </span>
+      </div>
+      {preset === "pick-month" && (
+        <label className={s.calendarPicker}>
+          Tháng thống kê{" "}
+          <input
+            type="month"
+            value={range.from.slice(0, 7)}
+            min="1970-01"
+            onChange={(e) => {
+              const next = calendarRange(e.target.value);
+              if (next) {
+                setRange(next);
+                setDraft(next);
+                setPage(1);
+              }
+            }}
+          />
+        </label>
+      )}
+      {preset === "pick-year" && (
+        <label className={s.calendarPicker}>
+          Năm thống kê{" "}
+          <select
+            value={range.from.slice(0, 4)}
+            onChange={(e) => {
+              const next = calendarRange(e.target.value);
+              if (next) {
+                setRange(next);
+                setDraft(next);
+                setPage(1);
+              }
+            }}
+          >
+            {Array.from(
+              { length: Number(vietnamToday().slice(0, 4)) - 1969 },
+              (_, i) => Number(vietnamToday().slice(0, 4)) - i,
+            ).map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {preset === "custom" && (
         <form
           className={s.customRange}
@@ -384,7 +525,12 @@ export function OperationsDashboard() {
               </div>
               <strong>{num(data.current.successfulTransactions)}</strong>
               <span className={s.delta}>
-                Thanh toán PayOS đã thu tiền trong kỳ
+                <button
+                  className="text-button"
+                  onClick={() => setTransactionScope("period")}
+                >
+                  Xem lịch sử trong kỳ <ChevronRight size={14} />
+                </button>
               </span>
             </section>
           </div>
@@ -466,6 +612,15 @@ export function OperationsDashboard() {
             ngày hoàn thành; chưa trừ điều chỉnh kế toán từ hoàn tiền.
           </p>
         </>
+      )}
+      {transactionScope && (
+        <TransactionHistory
+          key={`${transactionScope}:${range.from}:${range.to}`}
+          from={range.from}
+          to={range.to}
+          initialScope={transactionScope}
+          onClose={() => setTransactionScope(null)}
+        />
       )}
     </div>
   );

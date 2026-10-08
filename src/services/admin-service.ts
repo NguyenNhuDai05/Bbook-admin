@@ -35,6 +35,16 @@ export const adminService = {
     query(`admin:dashboard:reviews:${from}:${to}:${rating}:${page}`, (signal) =>
       api.dashboardReviews(from, to, rating, page, signal),
     ),
+  dashboardTransactions: (from: string, to: string, page: number) =>
+    query(`admin:dashboard:transactions:${from}:${to}:${page}`, (signal) =>
+      api.dashboardTransactions(from, to, page, signal),
+    ),
+  dashboardTransaction: (id: string) =>
+    query(
+      `admin:dashboard:transaction:${id}`,
+      (signal) => api.dashboardTransaction(id, signal),
+      !!id,
+    ),
   dashboardReview: (id: string) =>
     query(
       `admin:dashboard:review:${id}`,
