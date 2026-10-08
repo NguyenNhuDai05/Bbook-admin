@@ -24,4 +24,8 @@ Added Admin-only, non-cacheable GET endpoints under `/api/admin/dashboard/review
 
 ## Top KPI follow-up
 
+## Tooltip and layout follow-up
+
+Chart pointer movement now selects the nearest calendar day across the plot, with a vertical guide, a circular active marker and a tooltip positioned near the point and clamped inside the plot edges. Focus and click interactions remain available. The operations column stacks work queues and booking status, while the review card stretches alongside it and keeps its review list independently scrollable. Rating distribution spacing is reduced. No backend changes are required for this follow-up.
+
 The new transaction count has strict nonnegative integer validation in the frontend. The PostgreSQL statistics fixture covers paid and subsequently refunded payments, previous-period payments, demo bookings, the exclusive end boundary and pending payments. Backend build passed (three pre-existing warnings); the dashboard test filter passed 10 tests and skipped 3 database-dependent tests. No live deployment was performed.

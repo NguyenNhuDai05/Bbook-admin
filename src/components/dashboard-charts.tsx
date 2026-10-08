@@ -36,6 +36,7 @@ function DailyChart({
     y: (1 - x[metric] / ceiling) * 240,
   }));
   const row = data.daily.find((x) => x.date === active);
+  const activePoint = points[data.daily.findIndex((x) => x.date === active)];
   return (
     <div
       className={s.chart}
@@ -55,7 +56,24 @@ function DailyChart({
           </span>
         ))}
       </div>
-      <div className={s.plot}>
+      <div
+        className={s.plot}
+        onPointerMove={(event) => {
+          if (event.pointerType === "touch" || !data.daily.length) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const index = Math.max(
+            0,
+            Math.min(
+              data.daily.length - 1,
+              Math.floor(
+                ((event.clientX - rect.left) / rect.width) * data.daily.length,
+              ),
+            ),
+          );
+          setActive(data.daily[index].date);
+        }}
+        onPointerLeave={() => setActive(null)}
+      >
         <div className={s.gridlines} aria-hidden="true">
           {[0, 1, 2, 3, 4].map((x) => (
             <i key={x} />
@@ -99,7 +117,6 @@ function DailyChart({
               className={s.barColumn}
               aria-label={`${x.date}: ${format(x[metric])}`}
               onMouseEnter={() => setActive(x.date)}
-              onMouseLeave={() => setActive(null)}
               onFocus={() => setActive(x.date)}
               onBlur={() => setActive(null)}
               onClick={() => setActive(x.date)}
@@ -110,6 +127,34 @@ function DailyChart({
             </button>
           ))}
         </div>
+        {row && activePoint && (
+          <>
+            <div
+              className={s.chartGuide}
+              style={{ left: `${activePoint.x / 10}%` }}
+              aria-hidden="true"
+            />
+            <div
+              className={s.activePoint}
+              style={{
+                left: `${activePoint.x / 10}%`,
+                top: `${activePoint.y / 2.4}%`,
+              }}
+              aria-hidden="true"
+            />
+            <div
+              className={s.tooltip}
+              role="status"
+              style={{
+                left: `clamp(76px, ${activePoint.x / 10}%, calc(100% - 76px))`,
+                top: `clamp(8px, calc(${activePoint.y / 2.4}% - 78px), calc(100% - 78px))`,
+              }}
+            >
+              {row.date.split("-").reverse().join("/")}
+              <strong>{format(row[metric])}</strong>
+            </div>
+          </>
+        )}
         <div className={s.xAxis}>
           {data.daily.map(
             (x, i) =>
@@ -124,12 +169,6 @@ function DailyChart({
           )}
         </div>
       </div>
-      {row && (
-        <div className={s.tooltip} role="status">
-          {row.date.split("-").reverse().join("/")}
-          <strong>{format(row[metric])}</strong>
-        </div>
-      )}
     </div>
   );
 }

@@ -113,7 +113,7 @@ export function ServiceReviews({
     setPage(1);
   };
   return (
-    <section className={s.card}>
+    <section className={`${s.card} ${s.reviewCard}`}>
       <div className={s.heading}>
         <div>
           <h2>Đánh giá dịch vụ</h2>

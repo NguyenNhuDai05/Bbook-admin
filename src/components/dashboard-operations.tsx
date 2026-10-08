@@ -395,7 +395,10 @@ export function OperationsDashboard() {
         </>
       )}
       <div className={s.operations}>
-        <WorkQueue />
+        <div className={s.operationsColumn}>
+          <WorkQueue />
+          {data && <BookingBreakdown data={data} />}
+        </div>
         {data ? (
           <ServiceReviews
             key={`${range.from}:${range.to}`}
@@ -414,7 +417,6 @@ export function OperationsDashboard() {
       </div>
       {data && (
         <>
-          <BookingBreakdown data={data} />
           <section className={s.systemOverview}>
             <Users size={18} />
             <b>{num(data.users.total)} người dùng</b>

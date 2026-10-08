@@ -257,6 +257,35 @@
   border-radius: 7px;
   padding: 8px 12px;
   pointer-events: none;
+  z-index: 4;
+  min-width: 128px;
+  box-shadow: 0 6px 18px #17223226;
+  white-space: nowrap;
+}
+.chartGuide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed #d72e7280;
+  pointer-events: none;
+  z-index: 2;
+}
+.activePoint {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: #d72e72;
+  box-shadow: 0 0 0 2px #d72e72;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+}
+.operationsColumn {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
 }
 .tooltip strong {
   display: block;
@@ -327,7 +356,19 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
+}
+.reviewCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.reviewCard > * {
+  flex-shrink: 0;
+}
+.reviewCard .recentReviews {
+  flex: 1 1 280px;
+  min-height: 280px;
 }
 .count {
   display: inline-block;
@@ -418,8 +459,8 @@
 .ratingDistribution {
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  margin: 20px 0;
+  gap: 3px;
+  margin: 16px 0;
 }
 .ratingDistribution > button {
   display: flex;
@@ -427,7 +468,7 @@
   gap: 12px;
   font-size: 11px;
   width: 100%;
-  padding: 8px;
+  padding: 6px 8px;
   border: 1px solid transparent;
   border-radius: 7px;
   color: inherit;
