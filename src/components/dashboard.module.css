@@ -80,6 +80,9 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
+.reviewKpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .kpi,
 .card,
 .daily {

@@ -11,6 +11,9 @@ import {
   ArrowUp,
   ArrowDown,
   Users,
+  Star,
+  MessageSquare,
+  ArrowLeftRight,
 } from "lucide-react";
 import { invalidateResources, useResource } from "@/lib/client";
 import { adminService } from "@/services/admin-service";
@@ -340,6 +343,50 @@ export function OperationsDashboard() {
                 </section>
               );
             })}
+          </div>
+          <div className={`${s.kpis} ${s.reviewKpis}`}>
+            <section className={s.kpi}>
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <MessageSquare size={16} />
+                </span>
+                Số lượt đánh giá
+              </div>
+              <strong>{num(data.serviceReviews.total)}</strong>
+              <span className={s.delta}>
+                Đánh giá dịch vụ được tạo trong kỳ
+              </span>
+            </section>
+            <section className={s.kpi}>
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <Star size={16} />
+                </span>
+                Điểm bình quân
+              </div>
+              <strong>
+                {data.serviceReviews.averageRating === null
+                  ? "—"
+                  : `${data.serviceReviews.averageRating.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} / 5`}
+              </strong>
+              <span className={s.delta}>
+                {data.serviceReviews.total
+                  ? `Từ ${num(data.serviceReviews.total)} đánh giá trong kỳ`
+                  : "Chưa có đánh giá trong kỳ"}
+              </span>
+            </section>
+            <section className={s.kpi}>
+              <div className={s.kpiLabel}>
+                <span className={s.icon}>
+                  <ArrowLeftRight size={16} />
+                </span>
+                Giao dịch thành công
+              </div>
+              <strong>{num(data.current.successfulTransactions)}</strong>
+              <span className={s.delta}>
+                Thanh toán PayOS đã thu tiền trong kỳ
+              </span>
+            </section>
           </div>
           <div className={s.analytics}>
             <RevenueChart data={data} />

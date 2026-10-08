@@ -59,6 +59,7 @@ test("dashboard contract rejects missing metrics and inconsistent reviews instea
     totalBookings: 1,
     depositsCollected: 300000,
     refundsCompleted: 0,
+    successfulTransactions: 1,
   };
   const reviews = {
     total: 1,
@@ -89,6 +90,14 @@ test("dashboard contract rejects missing metrics and inconsistent reviews instea
     serviceReviews: reviews,
   };
   assert.equal(validateDashboard(data), data);
+  for (const successfulTransactions of [undefined, -1, 1.5, NaN]) {
+    assert.throws(() =>
+      validateDashboard({
+        ...data,
+        current: { ...period, successfulTransactions },
+      }),
+    );
+  }
   assert.throws(() =>
     validateDashboard({ ...data, current: { ...period, newMuas: undefined } }),
   );

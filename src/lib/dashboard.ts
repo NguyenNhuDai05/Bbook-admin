@@ -7,6 +7,7 @@ export interface DashboardPeriod {
   totalBookings: number;
   depositsCollected: number;
   refundsCompleted: number;
+  successfulTransactions: number;
 }
 export interface DashboardReview {
   reviewId: string;
@@ -77,12 +78,15 @@ export function validateDashboard(value: DashboardData): DashboardData {
     "totalBookings",
     "depositsCollected",
     "refundsCompleted",
+    "successfulTransactions",
   ];
   if (
     !value ||
     !fields.every(
       (k) => valid(value.current?.[k]) && valid(value.previous?.[k]),
     ) ||
+    !Number.isInteger(value.current?.successfulTransactions) ||
+    !Number.isInteger(value.previous?.successfulTransactions) ||
     !["total", "customers", "muas", "locked"].every((k) =>
       valid(value.users?.[k as keyof DashboardData["users"]]),
     ) ||
