@@ -43,3 +43,7 @@ npm run build
 Tests cover actual enum mappings, eligible financial action presentation, duplicate submission lock, malformed versus empty responses, permissions, sensitive-error sanitization, proxy allowlist and Origin policy. Runtime auth smoke tests use no credentials or business mutations. Authenticated module/mutation end-to-end tests still require a real Admin test session; this task does not claim they were exercised.
 
 The original admin implementation left Backend and Customer/MUA files unchanged (see its historical SHA-256 baseline in audit/unchanged-check.json). The dashboard extension adds an Admin-only controller and date-range utility/tests to Backend. The current dashboard/feedback extension also adds the feedback migration and API, and a feedback submission screen to Customer/MUA mobile sources; existing API contracts remain compatible.
+
+## Website Analytics
+
+Trang `/analytics` đọc dữ liệu GA4 qua API được bảo vệ bằng phiên Admin hiện tại. Cấu hình và kiểm thử theo [GA4_ANALYTICS_SETUP.md](GA4_ANALYTICS_SETUP.md); cần Property ID và service account server-side, ngoài Measurement ID của landing page.

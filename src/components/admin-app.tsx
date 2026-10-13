@@ -42,12 +42,16 @@ import { Moderation } from "./moderation-pages";
 import { BankAccounts, MoneyList, MoneyDetail } from "./finance-pages";
 import { Notifications, Directory, PlannedPage, Bookings } from "./other-pages";
 import { Styles } from "./styles-page";
+import { WebsiteAnalytics } from "./website-analytics";
 import { AdminContentLayout, isAdminListRoute } from "./admin-content-layout";
 import referenceCss from "./admin-reference.module.css";
 const groups = [
   {
     label: "",
-    items: [{ key: "", label: "Tổng quan", icon: LayoutDashboard }],
+    items: [
+      { key: "", label: "Tổng quan", icon: LayoutDashboard },
+      { key: "analytics", label: "Website Analytics", icon: Activity },
+    ],
   },
   {
     label: "QUẢN LÝ",
@@ -141,6 +145,7 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
   }
   let page;
   if (key === "") page = <Dashboard {...props} />;
+  else if (key === "analytics" && !id) page = <WebsiteAnalytics />;
   else if (key === "verification" && id)
     page = <VerificationDetail {...props} id={id} />;
   else if (key === "verification") page = <Applications {...props} />;
