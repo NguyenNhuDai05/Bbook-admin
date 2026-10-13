@@ -7,6 +7,8 @@ import {
   percentageChange,
   ratio,
   shiftDate,
+  analyticsToday,
+  sourceCategory,
 } from "./analytics-contracts.mjs";
 
 export class AnalyticsError extends Error {
@@ -53,7 +55,21 @@ export function analyticsReports(range, hosts) {
       },
     });
   }
-  add("totals", [], ["totalUsers", "sessions"], host, true);
+  add(
+    "totals",
+    [],
+    [
+      "totalUsers",
+      "sessions",
+      "newUsers",
+      "screenPageViews",
+      "engagementRate",
+      "userEngagementDuration",
+      "activeUsers",
+    ],
+    host,
+    true,
+  );
   for (const [id, event] of [
     ["apk", "apk_download_click"],
     ["play", "play_store_click"],
@@ -67,7 +83,13 @@ export function analyticsReports(range, hosts) {
     );
   }
   add("home", [], ["totalUsers"], homepage);
-  add("daily", ["date"], ["totalUsers"]);
+  add("daily", ["date"], ["totalUsers", "sessions"]);
+  add(
+    "dailyApk",
+    ["date"],
+    ["eventCount"],
+    all(host, exact("eventName", "apk_download_click")),
+  );
   const sources = sourcePatterns.map((value) => ({
     filter: {
       fieldName: "sessionSource",
@@ -80,7 +102,29 @@ export function analyticsReports(range, hosts) {
     "source5",
     [],
     ["totalUsers"],
-    all(host, { notExpression: { orGroup: { expressions: sources } } }),
+    all(host, {
+      notExpression: {
+        orGroup: {
+          expressions: [
+            ...sources,
+            exact("sessionSource", "(data not available)"),
+            exact("sessionSource", "(not set)"),
+          ],
+        },
+      },
+    }),
+  );
+  add(
+    "source6",
+    [],
+    ["totalUsers"],
+    all(host, exact("sessionSource", "(data not available)")),
+  );
+  add(
+    "source7",
+    [],
+    ["totalUsers"],
+    all(host, exact("sessionSource", "(not set)")),
   );
   const campaign = [
     "sessionSource",
@@ -96,6 +140,14 @@ export function analyticsReports(range, hosts) {
     all(host, exact("eventName", "apk_download_click")),
   );
   add("pages", ["pagePath"], ["screenPageViews"]);
+  add("trafficSessions", ["sessionSource", "sessionMedium"], ["sessions"]);
+  add("trafficUsers", ["sessionSource", "sessionMedium"], ["totalUsers"]);
+  add(
+    "trafficClicks",
+    ["sessionSource", "sessionMedium"],
+    ["eventCount"],
+    all(host, exact("eventName", "apk_download_click")),
+  );
   return reports;
 }
 function metric(row, report, name) {
@@ -103,13 +155,18 @@ function metric(row, report, name) {
     (header) => header.name === name,
   );
   if (index < 0) throw new AnalyticsError("response");
+  if (report.metadata?.emptyReason?.trim()) return null;
   if (!row) return 0;
   const raw = row.metricValues?.[index]?.value;
   const value = Number(raw);
   if (
     typeof raw !== "string" ||
-    !/^\d+$/.test(raw) ||
-    !Number.isSafeInteger(value)
+    !/^\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?$/.test(raw) ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    (!["engagementRate", "userEngagementDuration"].includes(name) &&
+      !Number.isSafeInteger(value)) ||
+    (name === "engagementRate" && value > 1)
   )
     throw new AnalyticsError("response");
   return value;
@@ -131,7 +188,9 @@ function periodMetric(report, name, period) {
   return metric(row, report, name);
 }
 export function normalizeAnalytics(range, reports, hosts, fetchedAt) {
-  for (const report of Object.values(reports)) {
+  const availability = {};
+  const warnings = [];
+  for (const [id, report] of Object.entries(reports)) {
     report.dimensionHeaders ||= [];
     const count = report.rowCount ?? 0;
     if (
@@ -150,6 +209,18 @@ export function normalizeAnalytics(range, reports, hosts, fetchedAt) {
       ![ANALYTICS_TIMEZONE, "Asia/Saigon"].includes(report.metadata?.timeZone)
     )
       throw new AnalyticsError("timezone");
+    const reason =
+      typeof report.metadata?.emptyReason === "string"
+        ? report.metadata.emptyReason.trim().slice(0, 500)
+        : null;
+    availability[id] = {
+      state: reason ? "unavailable" : count ? "available" : "empty",
+      reason: reason || null,
+    };
+    if (reason)
+      warnings.push(
+        "GA4 chưa cung cấp dữ liệu cho báo cáo " + id + ". Lý do: " + reason,
+      );
     for (const row of report.rows || []) {
       if (
         (row.dimensionValues?.length || 0) !== report.dimensionHeaders.length ||
@@ -160,26 +231,71 @@ export function normalizeAnalytics(range, reports, hosts, fetchedAt) {
         metric(row, report, header.name);
     }
   }
-  const kpi = (report, name) => {
-    const value = periodMetric(report, name, "current"),
+  const values = (current, previous) => ({
+    value: current,
+    previous,
+    change: percentageChange(current, previous),
+  });
+  const kpi = (report, name, multiplier = 1) => {
+    const current = periodMetric(report, name, "current"),
       previous = periodMetric(report, name, "previous");
-    return { value, previous, change: percentageChange(value, previous) };
+    return values(
+      current === null ? null : current * multiplier,
+      previous === null ? null : previous * multiplier,
+    );
+  };
+  const average = (period) => {
+    const duration = periodMetric(
+        reports.totals,
+        "userEngagementDuration",
+        period,
+      ),
+      active = periodMetric(reports.totals, "activeUsers", period);
+    return duration !== null && active ? duration / active : null;
   };
   const kpis = {
     users: kpi(reports.totals, "totalUsers"),
     sessions: kpi(reports.totals, "sessions"),
     apk: kpi(reports.apk, "eventCount"),
     play: kpi(reports.play, "eventCount"),
+    newUsers: kpi(reports.totals, "newUsers"),
+    views: kpi(reports.totals, "screenPageViews"),
+    engagementRate: kpi(reports.totals, "engagementRate", 100),
+    averageEngagementTime: values(average("current"), average("previous")),
   };
-  const dayValues = new Map(
+  const dailyValues = new Map(
     (reports.daily.rows || []).map((row) => [
       dimension(row, reports.daily, "date"),
-      metric(row, reports.daily, "totalUsers"),
+      {
+        users: metric(row, reports.daily, "totalUsers"),
+        sessions: metric(row, reports.daily, "sessions"),
+      },
+    ]),
+  );
+  const apkValues = new Map(
+    (reports.dailyApk.rows || []).map((row) => [
+      dimension(row, reports.dailyApk, "date"),
+      metric(row, reports.dailyApk, "eventCount"),
     ]),
   );
   const daily = Array.from({ length: range.days }, (_, i) => {
-    const date = shiftDate(range.start, i);
-    return { date, users: dayValues.get(date.replaceAll("-", "")) || 0 };
+    const date = shiftDate(range.start, i),
+      key = date.replaceAll("-", "");
+    return {
+      date,
+      users:
+        availability.daily.state === "unavailable"
+          ? null
+          : (dailyValues.get(key)?.users ?? 0),
+      sessions:
+        availability.daily.state === "unavailable"
+          ? null
+          : (dailyValues.get(key)?.sessions ?? 0),
+      apkClicks:
+        availability.dailyApk.state === "unavailable"
+          ? null
+          : (apkValues.get(key) ?? 0),
+    };
   });
   const sources = [
     "Direct",
@@ -187,66 +303,112 @@ export function normalizeAnalytics(range, reports, hosts, fetchedAt) {
     "Threads",
     "TikTok",
     "Google",
-    "Other sources",
+    "Other",
+    "(data not available)",
+    "(not set)",
   ].map((name, i) => {
-    const users = periodMetric(reports[`source${i}`], "totalUsers");
+    const users = periodMetric(reports["source" + i], "totalUsers");
     return { name, users, share: ratio(users, kpis.users.value) };
   });
-  // Join counts by the complete session attribution tuple. Never sum unique users.
-  const campaignMap = new Map();
-  for (const [report, metricName, field] of [
-    [reports.campaignSessions, "sessions", "sessions"],
-    [reports.campaignClicks, "eventCount", "apkClicks"],
-  ]) {
-    for (const row of report.rows || []) {
-      const values = [
-        "sessionSource",
-        "sessionMedium",
-        "sessionCampaignName",
-        "sessionManualAdContent",
-      ].map((name) => dimension(row, report, name));
-      const key = JSON.stringify(values);
-      const item = campaignMap.get(key) || {
-        source: values[0],
-        medium: values[1],
-        campaign: values[2],
-        content: values[3],
-        sessions: 0,
-        apkClicks: 0,
-      };
-      item[field] = metric(row, report, metricName);
-      campaignMap.set(key, item);
-    }
+  function joinCounts(specs, dimensions) {
+    const rows = new Map();
+    for (const [report, metricName, field] of specs)
+      for (const row of report.rows || []) {
+        const tuple = dimensions.map((name) => dimension(row, report, name));
+        const key = JSON.stringify(tuple);
+        const item = rows.get(key) || {
+          source: tuple[0],
+          medium: tuple[1],
+          ...(tuple.length > 2
+            ? { campaign: tuple[2], content: tuple[3] }
+            : {}),
+          ...Object.fromEntries(
+            specs.map(([r, , f]) => [
+              f,
+              r.metadata?.emptyReason?.trim() ? null : 0,
+            ]),
+          ),
+        };
+        item[field] = metric(row, report, metricName);
+        rows.set(key, item);
+      }
+    return [...rows.values()];
   }
-  const campaigns = [...campaignMap.values()]
+  const campaigns = joinCounts(
+    [
+      [reports.campaignSessions, "sessions", "sessions"],
+      [reports.campaignClicks, "eventCount", "apkClicks"],
+    ],
+    [
+      "sessionSource",
+      "sessionMedium",
+      "sessionCampaignName",
+      "sessionManualAdContent",
+    ],
+  )
     .map((item) => ({
       ...item,
       clickRate: ratio(item.apkClicks, item.sessions),
+      clicksPerSession:
+        item.apkClicks !== null && item.sessions
+          ? item.apkClicks / item.sessions
+          : null,
     }))
-    .sort((a, b) => b.sessions - a.sessions || b.apkClicks - a.apkClicks);
+    .sort(
+      (a, b) =>
+        (b.sessions ?? 0) - (a.sessions ?? 0) ||
+        (b.apkClicks ?? 0) - (a.apkClicks ?? 0),
+    );
+  const traffic = joinCounts(
+    [
+      [reports.trafficSessions, "sessions", "sessions"],
+      [reports.trafficUsers, "totalUsers", "users"],
+      [reports.trafficClicks, "eventCount", "apkClicks"],
+    ],
+    ["sessionSource", "sessionMedium"],
+  )
+    .map((item) => ({
+      ...item,
+      category: sourceCategory(item.source, item.medium),
+      clicksPerSession:
+        item.apkClicks !== null && item.sessions
+          ? item.apkClicks / item.sessions
+          : null,
+    }))
+    .sort(
+      (a, b) =>
+        (b.sessions ?? 0) - (a.sessions ?? 0) ||
+        (b.apkClicks ?? 0) - (a.apkClicks ?? 0),
+    );
   const pageRows = (reports.pages.rows || []).map((row) => ({
     path: dimension(row, reports.pages, "pagePath"),
     views: metric(row, reports.pages, "screenPageViews"),
   }));
-  const totalViews = pageRows.reduce((sum, page) => sum + page.views, 0);
+  const totalViews = pageRows.reduce((sum, page) => sum + (page.views ?? 0), 0);
   const pages = pageRows
     .map((page) => ({ ...page, share: ratio(page.views, totalViews) }))
-    .sort((a, b) => b.views - a.views);
-  const visitors = periodMetric(reports.home, "totalUsers");
-  const apkUsers = periodMetric(reports.apkHome, "totalUsers"),
+    .sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+  const visitors = periodMetric(reports.home, "totalUsers"),
+    apkUsers = periodMetric(reports.apkHome, "totalUsers"),
     playUsers = periodMetric(reports.playHome, "totalUsers");
-  const warnings = [];
   const metadata = Object.values(reports).map((report) => report.metadata);
   if (metadata.some((meta) => meta.subjectToThresholding))
     warnings.push(
-      "GA4 có áp dụng ngưỡng bảo vệ dữ liệu; một số dữ liệu có thể không được hiển thị.",
+      "GA4 có áp dụng ngưỡng bảo vệ dữ liệu; số liệu chi tiết có thể bị giới hạn.",
     );
   if (metadata.some((meta) => meta.dataLossFromOtherRow))
-    warnings.push(
-      "GA4 đã gộp một số giá trị vào (other); chi tiết nguồn hoặc chiến dịch có thể bị giới hạn.",
-    );
+    warnings.push("GA4 đã gộp một số giá trị vào (other).");
   if (metadata.some((meta) => meta.samplingMetadatas?.length))
-    warnings.push("GA4 trả dữ liệu có lấy mẫu cho khoảng thời gian này.");
+    warnings.push("GA4 trả dữ liệu có lấy mẫu.");
+  if (traffic.some((row) => row.category === "(data not available)"))
+    warnings.push(
+      "Một số nguồn chưa có attribution: (data not available). Không được coi là Direct.",
+    );
+  const provisional =
+    range.end ===
+    analyticsToday(
+      Number.isFinite(Date.parse(fetchedAt)) ? new Date(fetchedAt) : new Date(),
+    );
   return {
     status: "ready",
     range,
@@ -256,9 +418,13 @@ export function normalizeAnalytics(range, reports, hosts, fetchedAt) {
     kpis,
     daily,
     sources,
+    traffic,
     campaigns,
     pages,
     warnings,
+    availability,
+    provisional,
+    empty: availability.totals.state === "empty",
     actions: {
       visitors,
       apkUsers,
@@ -457,6 +623,7 @@ export function createAnalyticsService({
         return readJson(response);
       }
       const specs = analyticsReports(range, settings.hosts);
+      const unavailable = new Set();
       // Check each distinct combination once per configuration, including filter fields.
       const checks = new Map();
       for (const { request: report } of specs) {
@@ -472,7 +639,25 @@ export function createAnalyticsService({
       for (let i = 0; i < checkEntries.length; i += 4) {
         await Promise.all(
           checkEntries.slice(i, i + 4).map(async ([key, body]) => {
-            const checked = await request("checkCompatibility", body);
+            const optional =
+              body.metrics.length === 1 &&
+              body.metrics[0].name === "totalUsers" &&
+              body.dimensions.map((item) => item.name).join(",") ===
+                "sessionSource,sessionMedium";
+            let checked;
+            try {
+              checked = await request("checkCompatibility", body);
+            } catch (error) {
+              if (
+                optional &&
+                error instanceof AnalyticsError &&
+                error.code === "compatibility"
+              ) {
+                unavailable.add("trafficUsers");
+                return;
+              }
+              throw error;
+            }
             const metrics = new Map(
               (checked.metricCompatibilities || []).map((item) => [
                 item.metricMetadata?.apiName,
@@ -506,17 +691,37 @@ export function createAnalyticsService({
               requiredDimensions.some(
                 (name) => dimensions.get(name) !== "COMPATIBLE",
               )
-            )
+            ) {
+              if (optional) {
+                unavailable.add("trafficUsers");
+                return;
+              }
               throw new AnalyticsError("compatibility");
+            }
             remember(compatibilityCache, key, now() + 24 * 60 * 60000, 256);
           }),
         );
       }
       const reports = {};
+      if (unavailable.has("trafficUsers"))
+        reports.trafficUsers = {
+          dimensionHeaders: [
+            { name: "sessionSource" },
+            { name: "sessionMedium" },
+          ],
+          metricHeaders: [{ name: "totalUsers" }],
+          rowCount: 0,
+          metadata: {
+            timeZone: ANALYTICS_TIMEZONE,
+            emptyReason:
+              "Total Users không tương thích với source/medium của property này.",
+          },
+        };
       // GA4 allows at most five reports per batch. Two batches at a time bounds load.
       const batches = [];
-      for (let i = 0; i < specs.length; i += 5)
-        batches.push(specs.slice(i, i + 5));
+      const supported = specs.filter((spec) => !unavailable.has(spec.id));
+      for (let i = 0; i < supported.length; i += 5)
+        batches.push(supported.slice(i, i + 5));
       for (let i = 0; i < batches.length; i += 2) {
         await Promise.all(
           batches.slice(i, i + 2).map(async (batch) => {

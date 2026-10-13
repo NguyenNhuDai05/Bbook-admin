@@ -8,6 +8,7 @@ import {
   analyticsToday,
   analyticsRange,
   percentageChange,
+  sourceCategory,
 } from "../src/lib/analytics-contracts.mjs";
 import {
   analyticsReports,
@@ -47,14 +48,18 @@ function fixtures() {
     data[id].rows = rows;
     data[id].rowCount = rows.length;
   };
-  put("totals", [row(["previous"], [8, 12]), row(["current"], [10, 15])]);
+  put("totals", [
+    row(["previous"], [8, 12, 2, 18, 0.25, 40, 4]),
+    row(["current"], [10, 15, 3, 25, 0.5, 123.75, 5]),
+  ]);
   put("apk", [row(["previous"], [4])]); // Current absent: must NOT reuse previous.
   put("play", [row(["current"], [3])]);
-  put("daily", [row(["20240228"], [7]), row(["20240301"], [6])]);
+  put("daily", [row(["20240228"], [7, 8]), row(["20240301"], [6, 7])]);
+  put("dailyApk", [row(["20240228"], [2]), row(["20240301"], [3])]);
   put("home", [row([], [9])]);
   put("apkHome", [row([], [5, 3])]);
   put("playHome", [row([], [3, 2])]);
-  for (let i = 0; i < 6; i++) put(`source${i}`, [row([], [4])]);
+  for (let i = 0; i < 8; i++) put(`source${i}`, [row([], [4])]);
   put("campaignSessions", [
     row(["facebook", "social", "launch", "hero"], [5]),
     row(["facebook", "social", "launch", "footer"], [2]),
@@ -62,6 +67,18 @@ function fixtures() {
   put("campaignClicks", [
     row(["facebook", "social", "launch", "hero"], [7]),
     row(["tiktok", "social", "older", "video"], [1]),
+  ]);
+  put("trafficSessions", [
+    row(["facebook", "social"], [7]),
+    row(["threads", "social"], [3]),
+  ]);
+  put("trafficUsers", [
+    row(["facebook", "social"], [6]),
+    row(["threads", "social"], [5]),
+  ]);
+  put("trafficClicks", [
+    row(["facebook", "social"], [9]),
+    row(["tiktok", "social"], [1]),
   ]);
   put("pages", [row(["/"], [20]), row(["/privacy/"], [5])]);
   return data;
@@ -88,6 +105,153 @@ test("Vietnam timezone, strict dates, equal inclusive previous period, zero base
   assert.equal(percentageChange(0, 0), 0);
   assert.equal(percentageChange(5, 10), -50);
 });
+test("MVP KPIs preserve floating-point engagement and compute duration per active user", () => {
+  const result = normalizeAnalytics(
+    range,
+    fixtures(),
+    hosts,
+    "2024-03-01T03:00:00Z",
+  );
+  assert.equal(result.kpis.newUsers.value, 3);
+  assert.equal(result.kpis.views.value, 25);
+  assert.equal(result.kpis.engagementRate.value, 50);
+  assert.equal(result.kpis.engagementRate.previous, 25);
+  assert.equal(result.kpis.averageEngagementTime.value, 24.75);
+  assert.equal(result.kpis.averageEngagementTime.previous, 10);
+  assert.equal(result.provisional, true);
+  assert.deepEqual(
+    result.daily.map((day) => day.sessions),
+    [8, 0, 7],
+  );
+  assert.deepEqual(
+    result.daily.map((day) => day.apkClicks),
+    [2, 0, 3],
+  );
+  const snapshot = fixtures();
+  snapshot.totals.rows[1].metricValues[4].value = "0.7239";
+  assert.equal(
+    normalizeAnalytics(range, snapshot, hosts, "2024-03-02").kpis.engagementRate
+      .value,
+    72.39,
+  );
+  snapshot.totals.rows[1].metricValues[4].value = "1.1";
+  assert.throws(
+    () => normalizeAnalytics(range, snapshot, hosts, "2024-03-02"),
+    (error) => error.code === "response",
+  );
+});
+test("source/medium report joins exact tuples, never aggregates campaign users, uses clicks per session without percent", () => {
+  const result = normalizeAnalytics(range, fixtures(), hosts, "2024-03-02");
+  const facebook = result.traffic.find((row) => row.source === "facebook");
+  assert.equal(facebook.sessions, 7);
+  assert.equal(facebook.users, 6);
+  assert.equal(facebook.apkClicks, 9);
+  assert.equal(facebook.clicksPerSession, 9 / 7);
+  assert.equal(result.kpis.users.value, 10);
+  assert.equal(
+    result.traffic.reduce((sum, row) => sum + row.users, 0),
+    11,
+  );
+  assert.equal(
+    result.traffic.find((row) => row.source === "tiktok").clicksPerSession,
+    null,
+  );
+  assert.equal(result.campaigns[0].clicksPerSession, 1.4);
+  const data = fixtures();
+  data.trafficSessions.rows.push(row(["facebook", "referral"], [2]));
+  data.trafficSessions.rowCount++;
+  const separate = normalizeAnalytics(range, data, hosts, "2024-03-02");
+  assert.equal(
+    separate.traffic.filter((item) => item.source === "facebook").length,
+    2,
+  );
+});
+test("unknown attribution stays separate; unavailable metadata never becomes fabricated zero", () => {
+  for (const [source, medium, expected] of [
+    ["facebook", "social", "Facebook"],
+    ["threads.net", "referral", "Threads"],
+    ["tiktok", "social", "TikTok"],
+    ["google", "organic", "Google"],
+    ["(direct)", "(none)", "Direct"],
+    ["(direct)", "social", "Other"],
+    ["(direct)", "", "(not set)"],
+    ["example.com", "referral", "Other"],
+    ["(data not available)", "social", "(data not available)"],
+    ["facebook", "(data not available)", "(data not available)"],
+    ["(not set)", "(not set)", "(not set)"],
+    ["", "social", "(not set)"],
+  ])
+    assert.equal(sourceCategory(source, medium), expected);
+  const data = fixtures();
+  for (const id of ["totals", "dailyApk", "trafficUsers"]) {
+    data[id].rows = [];
+    data[id].rowCount = 0;
+    data[id].metadata.emptyReason = "Processing or restricted report";
+  }
+  const result = normalizeAnalytics(range, data, hosts, "2024-03-02");
+  assert.equal(result.kpis.users.value, null);
+  assert.equal(result.kpis.views.value, null);
+  assert.equal(result.kpis.averageEngagementTime.value, null);
+  assert.equal(result.kpis.users.change, null);
+  assert.ok(result.daily.every((day) => day.apkClicks === null));
+  assert.ok(result.traffic.every((row) => row.users === null));
+  assert.equal(result.availability.totals.state, "unavailable");
+  assert.equal(result.empty, false);
+  assert.ok(
+    result.warnings.some((w) => w.includes("Processing or restricted report")),
+  );
+});
+test("valid zero, empty report and provisional dates have distinct states", () => {
+  const data = fixtures();
+  data.totals.rows[1] = row(["current"], [0, 0, 0, 0, 0, 0, 0]);
+  const zero = normalizeAnalytics(range, data, hosts, "2024-03-02");
+  assert.equal(zero.kpis.users.value, 0);
+  assert.equal(zero.availability.totals.state, "available");
+  assert.equal(zero.empty, false);
+  assert.equal(zero.provisional, false);
+  data.totals.rows = [];
+  data.totals.rowCount = 0;
+  const empty = normalizeAnalytics(range, data, hosts, "2024-03-02");
+  assert.equal(empty.empty, true);
+  assert.equal(empty.kpis.users.value, 0);
+  assert.equal(empty.kpis.averageEngagementTime.value, null);
+});
+test("optional source/medium Users incompatibility leaves Sessions and APK report usable", async () => {
+  const google = fakeGoogle();
+  const load = createAnalyticsService({
+    environment: () => ({
+      GA4_PROPERTY_ID: "558760053",
+      GA4_SERVICE_ACCOUNT_JSON_BASE64: credentials,
+    }),
+    fetchImpl: async (url, init) => {
+      if (url.includes("checkCompatibility")) {
+        const body = JSON.parse(init.body);
+        if (
+          body.dimensions.map((d) => d.name).join(",") ===
+            "sessionSource,sessionMedium" &&
+          body.metrics[0].name === "totalUsers"
+        )
+          return new Response("", { status: 400 });
+      }
+      return google.fetchImpl(url, init);
+    },
+  });
+  const result = await load(range);
+  assert.equal(result.status, "ready");
+  assert.equal(result.availability.trafficUsers.state, "unavailable");
+  assert.ok(result.warnings.some((w) => w.includes("không tương thích")));
+  const sent = google.calls
+    .filter((call) => call.url.includes("batchRunReports"))
+    .flatMap((call) => JSON.parse(call.init.body).requests);
+  assert.ok(
+    !sent.some(
+      (request) =>
+        request.dimensions.map((d) => d.name).join(",") ===
+          "sessionSource,sessionMedium" &&
+        request.metrics[0].name === "totalUsers",
+    ),
+  );
+});
 test("KPI period names, distinct users vs daily/source sum, full campaign key and parallel actions", () => {
   const result = normalizeAnalytics(
     range,
@@ -109,7 +273,7 @@ test("KPI period names, distinct users vs daily/source sum, full campaign key an
   );
   assert.equal(
     result.sources.reduce((sum, source) => sum + source.users, 0),
-    24,
+    32,
   );
   assert.equal(result.sources[0].share, 40);
   assert.equal(result.campaigns[0].clickRate, 140);
@@ -143,7 +307,7 @@ test("all queries share dates/hosts; Other excludes only named sources; no guess
   assert.equal(
     source.request.dimensionFilter.andGroup.expressions[1].notExpression.orGroup
       .expressions.length,
-    5,
+    7,
   );
   assert.equal(
     specs.find((spec) => spec.id === "campaignClicks").request.dimensions.at(-1)
@@ -314,7 +478,7 @@ test("server OAuth, batches, cache expiration, compatibility reuse, coalesced sa
   assert.equal(google.calls.filter((c) => c.url.includes("oauth2")).length, 1);
   assert.equal(
     google.calls.filter((c) => c.url.includes("batchRunReports")).length,
-    4,
+    5,
   );
   const before = google.calls.length;
   await load(range);
@@ -330,7 +494,7 @@ test("server OAuth, batches, cache expiration, compatibility reuse, coalesced sa
   );
   assert.equal(
     google.calls.filter((c) => c.url.includes("batchRunReports")).length,
-    8,
+    10,
   );
 });
 test("ADC service-account file alone authenticates and keeps report/token caches and coalescing", async () => {
@@ -360,7 +524,7 @@ test("ADC service-account file alone authenticates and keeps report/token caches
   );
   assert.equal(
     google.calls.filter((call) => call.url.includes("batchRunReports")).length,
-    4,
+    5,
   );
   const before = google.calls.length;
   await load(range);
@@ -373,7 +537,7 @@ test("ADC service-account file alone authenticates and keeps report/token caches
   await load(range);
   assert.equal(
     google.calls.filter((call) => call.url.includes("batchRunReports")).length,
-    8,
+    10,
   );
   assert.equal(
     google.calls.filter((call) => call.url.includes("oauth2")).length,
@@ -507,7 +671,7 @@ test("ADC file/key rotation invalidates old cached reports; invalid rotation fai
   );
   assert.equal(
     google.calls.filter((call) => call.url.includes("batchRunReports")).length,
-    8,
+    10,
   );
   contents = "null";
   await assert.rejects(load(range), (error) => error.code === "config");

@@ -2,7 +2,7 @@
 
 ## Đã triển khai
 
-Menu **Website Analytics** dẫn đến `/analytics`, trong shell/scroll/sidebar hiện tại. Trang có bốn KPI, bộ lọc 7/30/90 ngày (mặc định 30), khoảng tùy chỉnh tối đa 366 ngày, biểu đồ người truy cập theo ngày có tooltip và bảng ngày, nguồn truy cập, chiến dịch UTM, hai nhánh APK/Google Play và lượt xem theo page path thực tế. Có loading, zero, empty, chưa kết nối, lỗi và Retry; không dùng dữ liệu demo trong production.
+Menu **Website Analytics** dẫn đến `/analytics`, trong shell/scroll/sidebar hiện tại. Trang có bảy KPI MVP và giữ KPI Play Store, bộ lọc 7/30/90 ngày (mặc định 30), khoảng tùy chỉnh tối đa 366 ngày, một biểu đồ chuyển giữa Users/Sessions/APK clicks theo ngày, có tooltip và bảng ngày, nguồn truy cập, chiến dịch UTM, hai nhánh APK/Google Play và lượt xem theo page path thực tế. Có loading, zero, empty, chưa kết nối, lỗi và Retry; không dùng dữ liệu demo trong production.
 
 Audit: Admin là Next.js 16.3.8 App Router + React 19 + TypeScript + lucide-react. Không có thư viện chart; dashboard hiện có dùng SVG nên chart Analytics cũng dùng SVG. Các tokens pink, surface, border, font, buttons và scroll layout hiện tại được giữ. Endpoint `/api/analytics` lấy dữ liệu qua Google Analytics Data API ở server, không qua ASP.NET backend. Không thêm database/migration hoặc sửa authentication.
 
@@ -69,12 +69,12 @@ Task này không chạy production build, không commit/push/merge/deploy và kh
 ## Cách đọc đúng số liệu
 
 - **Total Visitors** là GA4 `totalUsers` của các hostname cấu hình trong toàn khoảng ngày. **Sessions** là `sessions`; một người có thể có nhiều phiên. KPI không được lấy bằng cách cộng users theo ngày hoặc nguồn.
-- Bốn KPI so sánh với kỳ trước **cùng số ngày**, kết thúc ngay trước ngày bắt đầu. Nếu kỳ trước bằng 0 mà hiện tại lớn hơn 0, tỷ lệ là không xác định (hiển thị giải thích), không tạo phần trăm tăng giả.
-- Biểu đồ dùng `date` + `totalUsers`. Những ngày GA4 không trả dòng được thể hiện bằng 0; metadata về thresholding/sampling được cảnh báo trên UI. Ngày hiện tại còn đang thu thập.
-- Nguồn dùng bộ lọc trên **sessionSource**, gồm Direct, các tên/referral domain được nhận diện rõ của Facebook/Threads/TikTok/Google, còn lại Other sources. Mỗi nhóm được GA4 tính unique users trực tiếp, không cộng users của nhiều source alias. Một người có thể có phiên ở nhiều nhóm, nên tổng tỷ lệ có thể vượt 100%.
-- Chiến dịch dùng tuple `sessionSource`, `sessionMedium`, `sessionCampaignName`, `sessionManualAdContent`; thể hiện UTM source/medium/campaign/content. Sessions và `apk_download_click`/`eventCount` lấy bằng các report riêng rồi join theo đủ bốn dimensions. Clicks không bị diễn giải thành unique users; CTR = clicks / sessions, có thể trên 100%. Campaign có clicks nhưng không có sessions vẫn được giữ với CTR —.
+- Các KPI so sánh với kỳ trước **cùng số ngày**, kết thúc ngay trước ngày bắt đầu. Nếu kỳ trước bằng 0 mà hiện tại lớn hơn 0, tỷ lệ là không xác định (hiển thị giải thích), không tạo phần trăm tăng giả.
+- Biểu đồ dùng `date + totalUsers + sessions` và report riêng `date + eventCount` lọc APK. Không cộng users theo ngày thành unique users toàn kỳ. Ngày có số 0 hợp lệ vẫn hiển thị 0; report có `emptyReason` dùng null/— và không vẽ dữ liệu giả qua khoảng thiếu.
+- Nguồn giữ bộ lọc trên sessionSource để GA4 đếm users duy nhất trực tiếp từng nhóm; thêm (data not available) và (not set) riêng, loại chúng khỏi Other. Bảng Traffic Source Performance dùng sessionSource + sessionMedium, có Sessions, Total Users, APK event count và APK Clicks per Session. Không cộng users từ campaign hoặc alias; số users từng dòng không được cộng thành tổng users. Direct chỉ được phân loại khi source/medium phù hợp, không gán nguồn chưa rõ vào Direct.
+- Chiến dịch giữ tuple `sessionSource`, `sessionMedium`, `sessionCampaignName`, `sessionManualAdContent`, với Sessions và APK event count lấy bằng report riêng rồi join đúng tuple. UI đổi tên thành Lượt nhấn APK / phiên (APK Clicks per Session), hiển thị số lần/phiên, không nhân 100 hoặc dùng ký hiệu %. Giá trị có thể lớn hơn 1; không có Sessions thì —. Trường `clickRate` cũ còn trong DTO để tương thích nhưng UI chỉ dùng `clicksPerSession`.
 - Download Actions lấy `totalUsers` trên `pagePath=/` làm mẫu số, và users có custom event trên chính trang `/` làm tử số cho từng nhánh riêng. Không coi APK rồi Play là hai bước nối tiếp. Click count không xác nhận tải hoàn tất hoặc cài đặt.
-- **Top Landing Pages** hiển thị `pagePath` + `screenPageViews` (Views) của các trang thực tế. Đây là lượt xem theo trang, không phải báo cáo số phiên bắt đầu tại trang; không hardcode những route chưa tồn tại.
+- **Top Pages** hiển thị `pagePath` + `screenPageViews` (Views) của các trang thực tế. Đây là lượt xem theo trang, không phải báo cáo số phiên bắt đầu tại trang; không hardcode những route chưa tồn tại.
 - Dashboard chỉ lọc hostname website, không trộn traffic mobile app hoặc localhost. Các dimension/metric/filter được kiểm tra compatibility với property trước khi đọc report.
 
 Cache thành công 20 phút trong bộ nhớ server, tối đa 48 khoảng ngày; cùng query đang chạy được gộp. Thay filter thực sự mới gọi API client; abort bỏ response cũ khi đổi filter. Google report requests được batch tối đa 5/batch, tối đa hai batch đồng thời; compatibility cache 24 giờ. Request Google timeout 15 giây/lần, toàn bộ truy vấn tối đa 55 giây. Lỗi/quota không được cache thành dữ liệu 0. Response HTTP `private, no-store` và luôn kiểm tra quyền trước cache; cache riêng theo property/hosts/fingerprint credentials, reset khi restart service. Credentials, access token và Google error body không trả về UI hoặc log.
@@ -106,6 +106,28 @@ Với ADC, server đọc lại nguồn file trước cache lookup và fingerprin
 - API/data/auth adapter: `src/app/api/analytics/route.ts`, `src/lib/analytics-server.ts`, `src/lib/analytics-data.mjs`, `src/lib/analytics-handler.mjs`.
 - Shared contract/repository/service: `src/lib/analytics-contracts.mjs`, `src/lib/analytics-types.ts`, `src/repositories/analytics-api.ts`, `src/services/analytics-service.ts`.
 - Setup/tests: `.env.example`, `GA4_ANALYTICS_SETUP.md`, `tests/analytics.test.mjs`, `scripts/smoke.mjs`, `README.md`.
+
+## MVP P1 — cập nhật 14/10/2026
+
+Kết quả xác minh local: `npm run lint`, `npm run typecheck`, `npm test` (**66/66 đạt**) và `git diff --check` đạt. Có 5 regression tests mới cho KPI/attribution/metadata/compatibility và 2 tests render React với resource fixture cho zero/unavailable/error/chưa kết nối. Tests UI kiểm tra markup, không thay thế kiểm tra trực quan hoặc tương tác desktop/mobile trong phiên Admin thật. Không chạy production build hay đọc Secret File Render. Các file lần này: `src/lib/analytics-data.mjs`, `src/lib/analytics-contracts.mjs`, `src/lib/analytics-types.ts`, `src/components/website-analytics.tsx`, `src/components/website-analytics.module.css`, `tests/analytics.test.mjs`, `tests/analytics-ui.test.mjs`, `GA4_ANALYTICS_SETUP.md`.
+
+- KPI: Total Users, New Users, Sessions, Total Page Views, APK Download Clicks, Engagement Rate, Average Engagement Time; giữ Play Store Clicks. UI tiếng Việt, cùng design tokens và responsive breakpoints cũ.
+- Metrics tổng: totalUsers, sessions, newUsers, screenPageViews, engagementRate, userEngagementDuration, activeUsers. Engagement rate API là fraction, nhân 100 để hiển thị phần trăm; average engagement time = userEngagementDuration / activeUsers, đơn vị giây. Không chia cho totalUsers hoặc lấy trung bình các giá trị theo ngày. Không có activeUsers thì —.
+- Bảng source/medium dùng ba reports độc lập: sessions, totalUsers và eventCount lọc apk_download_click. Giữ nguyên raw source/medium, nhóm Facebook/TikTok/Threads/Google/Direct/Other/(data not available)/(not set) chỉ để lọc và giải thích. Nếu API báo totalUsers theo source/medium không tương thích, cột Users là — và có cảnh báo; vẫn tải Sessions và APK clicks. Các lỗi quyền/quota không bị bỏ qua.
+- Mỗi report có availability available/empty/unavailable và lý do emptyReason. Có rows chứa 0 là số 0 hợp lệ; report không có rows/không có emptyReason là empty và totals 0, kèm thông báo trống; report có emptyReason là unavailable, chỉ số null/—, không coi là zero. GA4 không cung cấp dấu xác nhận mọi dữ liệu lịch sử đã hoàn tất; không thể đảm bảo report empty là traffic thực tế bằng 0.
+- Khoảng ngày có hôm nay được đánh dấu provisional và cảnh báo so sánh chưa hoàn tất. Thời gian fetchedAt chỉ là lúc server lấy report, không phải lúc GA4 xử lý xong. Cache 20 phút giữ nguyên.
+- Daily: users/sessions và APK clicks; metric null tạo khoảng thiếu, không nối đường qua dữ liệu chưa có. Không thêm mock production.
+
+### Xác minh production sau khi bạn tự triển khai
+
+1. Không cần đổi Render variables hoặc credentials. Mở /analytics bằng tài khoản Admin; các trạng thái chưa đăng nhập/không có quyền giữ nguyên.
+2. Đối chiếu property 558760053 với cùng hostname bbookmakeup.com/www, timezone Asia/Ho_Chi_Minh, và cùng ngày. Chọn kỳ kết thúc hôm qua hoặc trước đó để giảm dữ liệu đang xử lý; vẫn lưu ý độ trễ GA4.
+3. GA4 Explore: sessionSource + sessionMedium, sessions + totalUsers; report khác cùng dimensions với eventName=apk_download_click và eventCount. So từng dòng bảng mới, không cộng users để đối chiếu tổng. Các campaign khác nhau của cùng source/medium phải nằm trong một dòng bảng nguồn; bảng UTM vẫn giữ chi tiết.
+4. Kiểm tra KPI engagementRate, fraction→%, average engagement time theo activeUsers, total views và newUsers. Không đối chiếu Total Users với Active Users mặc định trong một số báo cáo GA4.
+5. Thử 7/30/90/custom, ba lựa chọn biểu đồ, bộ lọc nguồn, ngày có hôm nay; kiểm tra các nguồn chưa rõ hiện riêng, số 0/— không bị lẫn. APK Clicks per Session không có % và không được gọi là cài đặt/chuyển đổi.
+6. Chờ cache 20 phút nếu vừa có dữ liệu mới; Tải lại không ép bỏ cache. Không thay tracking/consent trên landing page để làm đẹp số liệu.
+
+Trong lượt này chỉ sửa UI Analytics, contracts/DTO, GA4 report normalization/query/compatibility, tests và tài liệu này. Không sửa backend, bbook-web, authentication, Render; không build production, commit/push/deploy. Chưa có kết nối property thật được xác minh trong môi trường local; bộ test dùng fixture riêng, không gửi dữ liệu giả lên Google.
 
 ## Giới hạn xác minh
 
