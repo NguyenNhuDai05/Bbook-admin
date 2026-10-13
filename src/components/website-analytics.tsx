@@ -22,7 +22,14 @@ import { websiteAnalyticsQuery } from "@/services/analytics-service";
 import { PageTitle } from "./ui";
 import s from "./website-analytics.module.css";
 
-const count = (value: number) => value.toLocaleString("vi-VN");
+const count = (value: number | null) =>
+  value === null ? "—" : value.toLocaleString("vi-VN");
+const decimal = (value: number | null) =>
+  value === null
+    ? "—"
+    : value.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+const seconds = (value: number | null) =>
+  value === null ? "—" : decimal(value) + " giây";
 const percent = (value: number | null) =>
   value === null
     ? "—"
@@ -55,12 +62,14 @@ function Metric({
   metric,
   icon,
   state,
+  format = count,
 }: {
   label: string;
   subtitle: string;
   metric?: AnalyticsKpi;
   icon: ReactNode;
   state: string;
+  format?: (value: number | null) => string;
 }) {
   const delta = metric?.change ?? null;
   return (
@@ -72,7 +81,7 @@ function Metric({
       <p>{subtitle}</p>
       <strong className={s.metricValue}>
         {metric ? (
-          count(metric.value)
+          format(metric.value)
         ) : state === "loading" ? (
           <span className={s.skeleton} aria-label="Đang tải" />
         ) : (
@@ -82,7 +91,7 @@ function Metric({
       {metric ? (
         <div
           className={`${s.delta} ${delta !== null && delta !== undefined && delta < 0 ? s.negative : s.positive}`}
-          title={`Kỳ trước: ${count(metric.previous)}`}
+          title={`Kỳ trước: ${format(metric.previous)}`}
         >
           {delta !== null &&
             delta !== undefined &&
@@ -93,9 +102,11 @@ function Metric({
               <ArrowUpRight size={15} />
             ))}
           <span>
-            {delta === null
-              ? "Kỳ trước bằng 0 · chưa có tỷ lệ"
-              : `${delta && delta > 0 ? "+" : ""}${percent(delta)} so với kỳ trước`}
+            {metric.value === null
+              ? "GA4 chưa cung cấp chỉ số"
+              : delta === null
+                ? "Chưa có tỷ lệ so sánh hợp lệ"
+                : `${delta && delta > 0 ? "+" : ""}${percent(delta)} so với kỳ trước`}
           </span>
         </div>
       ) : (
@@ -111,115 +122,178 @@ function Metric({
   );
 }
 function Chart({ daily }: { daily: AnalyticsReady["daily"] }) {
+  const [metric, setMetric] = useState<"users" | "sessions" | "apkClicks">(
+    "users",
+  );
   const [selected, setSelected] = useState<number | null>(null);
   const gradient = useId().replaceAll(":", "");
+  const labels = {
+    users: "Người truy cập",
+    sessions: "Phiên truy cập",
+    apkClicks: "Lượt nhấn APK",
+  };
   const ceiling = Math.max(
     4,
-    Math.ceil(Math.max(...daily.map((day) => day.users), 0) / 4) * 4,
+    Math.ceil(Math.max(...daily.map((day) => day[metric] ?? 0), 0) / 4) * 4,
   );
-  const points = daily.map((day, index) => ({
-    x: ((index + 0.5) / daily.length) * 1000,
-    y: 230 - (day.users / ceiling) * 220,
+  const points = daily.map((day, i) => ({
+    x: ((i + 0.5) / daily.length) * 1000,
+    y:
+      day[metric] === null
+        ? null
+        : 230 - ((day[metric] as number) / ceiling) * 220,
   }));
+  const segments: { x: number; y: number }[][] = [];
+  let segment: { x: number; y: number }[] = [];
+  for (const point of points) {
+    if (point.y === null) {
+      if (segment.length) segments.push(segment);
+      segment = [];
+    } else segment.push({ x: point.x, y: point.y });
+  }
+  if (segment.length) segments.push(segment);
   const current = selected === null ? null : daily[selected];
-  const active = selected === null ? null : points[selected];
   return (
     <>
-      <div
-        className={s.chart}
-        role="group"
-        aria-label="Người truy cập theo ngày"
-      >
-        <div className={s.yAxis}>
-          {[1, 0.75, 0.5, 0.25, 0].map((ratio) => (
-            <span key={ratio}>{count(ceiling * ratio)}</span>
-          ))}
+      <div className={s.chartTabs} role="group" aria-label="Chỉ số biểu đồ">
+        {(["users", "sessions", "apkClicks"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={metric === key}
+            onClick={() => {
+              setMetric(key);
+              setSelected(null);
+            }}
+          >
+            {labels[key]}
+          </button>
+        ))}
+      </div>
+      {daily.every((day) => day[metric] === null) ? (
+        <div className={s.placeholder}>
+          GA4 chưa cung cấp {labels[metric].toLowerCase()}; không hiển thị đường
+          biểu đồ giả.
         </div>
+      ) : (
         <div
-          className={s.plot}
-          onPointerMove={(event) => {
-            const rect = event.currentTarget.getBoundingClientRect();
-            setSelected(
-              Math.min(
-                daily.length - 1,
-                Math.max(
-                  0,
-                  Math.floor(
-                    ((event.clientX - rect.left) / rect.width) * daily.length,
-                  ),
-                ),
-              ),
-            );
-          }}
-          onPointerLeave={() => setSelected(null)}
+          className={s.chart}
+          role="group"
+          aria-label={labels[metric] + " theo ngày"}
         >
-          <div className={s.gridlines} aria-hidden="true">
-            {[0, 1, 2, 3, 4].map((n) => (
-              <i key={n} />
+          <div className={s.yAxis}>
+            {[1, 0.75, 0.5, 0.25, 0].map((ratio) => (
+              <span key={ratio}>{count(ceiling * ratio)}</span>
             ))}
           </div>
-          <svg
-            viewBox="0 0 1000 240"
-            preserveAspectRatio="none"
-            aria-hidden="true"
+          <div
+            className={s.plot}
+            onPointerMove={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              setSelected(
+                Math.max(
+                  0,
+                  Math.min(
+                    daily.length - 1,
+                    Math.floor(
+                      ((event.clientX - rect.left) / rect.width) * daily.length,
+                    ),
+                  ),
+                ),
+              );
+            }}
+            onPointerLeave={() => setSelected(null)}
           >
-            <defs>
-              <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
-                <stop stopColor="#ff5c9a" stopOpacity=".28" />
-                <stop offset="1" stopColor="#ff5c9a" stopOpacity=".02" />
-              </linearGradient>
-            </defs>
-            {points.length > 1 && (
-              <polygon
-                points={`${points[0].x},240 ${points.map((point) => `${point.x},${point.y}`).join(" ")} ${points[points.length - 1].x},240`}
-                fill={`url(#${gradient})`}
-              />
-            )}
-            <polyline
-              points={points.map((point) => `${point.x},${point.y}`).join(" ")}
-              fill="none"
-              stroke="#ee4f8f"
-              strokeWidth="2.5"
-              vectorEffect="non-scaling-stroke"
-            />
-            {points.length === 1 && (
-              <circle cx={points[0].x} cy={points[0].y} r="4" fill="#ee4f8f" />
-            )}
-          </svg>
-          {current && active && (
-            <>
-              <div className={s.guide} style={{ left: `${active.x / 10}%` }} />
+            <div className={s.gridlines} aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <i key={i} />
+              ))}
+            </div>
+            <svg
+              viewBox="0 0 1000 240"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
+                  <stop stopColor="#ff5c9a" stopOpacity=".28" />
+                  <stop offset="1" stopColor="#ff5c9a" stopOpacity=".02" />
+                </linearGradient>
+              </defs>
+              {segments.map((part, i) => (
+                <g key={i}>
+                  {part.length > 1 ? (
+                    <>
+                      <polygon
+                        points={
+                          part[0].x +
+                          ",240 " +
+                          part.map((p) => p.x + "," + p.y).join(" ") +
+                          " " +
+                          part[part.length - 1].x +
+                          ",240"
+                        }
+                        fill={"url(#" + gradient + ")"}
+                      />
+                      <polyline
+                        points={part.map((p) => p.x + "," + p.y).join(" ")}
+                        fill="none"
+                        stroke="#ee4f8f"
+                        strokeWidth="2.5"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    </>
+                  ) : (
+                    <circle
+                      cx={part[0].x}
+                      cy={part[0].y}
+                      r="4"
+                      fill="#ee4f8f"
+                    />
+                  )}
+                </g>
+              ))}
+            </svg>
+            {current && (
               <div
                 className={s.tooltip}
                 role="status"
                 style={{
-                  left: `clamp(82px, ${active.x / 10}%, calc(100% - 82px))`,
+                  left:
+                    "clamp(82px, " +
+                    ((selected! + 0.5) / daily.length) * 100 +
+                    "%, calc(100% - 82px))",
                 }}
               >
                 {dateLabel(current.date)}
-                <strong>{count(current.users)} người truy cập</strong>
+                <strong>
+                  {count(current[metric])} · {labels[metric]}
+                </strong>
               </div>
-            </>
-          )}
-          <div className={s.xAxis}>
-            {daily.map(
-              (day, i) =>
-                (i === 0 ||
-                  i === daily.length - 1 ||
-                  i % Math.max(1, Math.ceil(daily.length / 5)) === 0) && (
-                  <span
-                    key={day.date}
-                    style={{
-                      left: `clamp(20px, ${((i + 0.5) / daily.length) * 100}%, calc(100% - 20px))`,
-                    }}
-                  >
-                    {day.date.slice(5).split("-").reverse().join("/")}
-                  </span>
-                ),
             )}
+            <div className={s.xAxis}>
+              {daily.map(
+                (day, i) =>
+                  (i === 0 ||
+                    i === daily.length - 1 ||
+                    i % Math.max(1, Math.ceil(daily.length / 5)) === 0) && (
+                    <span
+                      key={day.date}
+                      style={{
+                        left:
+                          "clamp(20px, " +
+                          ((i + 0.5) / daily.length) * 100 +
+                          "%, calc(100% - 20px))",
+                      }}
+                    >
+                      {day.date.slice(5).split("-").reverse().join("/")}
+                    </span>
+                  ),
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <details className={s.details}>
         <summary>Xem dữ liệu theo ngày</summary>
         <div className={s.tableWrap}>
@@ -228,6 +302,8 @@ function Chart({ daily }: { daily: AnalyticsReady["daily"] }) {
               <tr>
                 <th>Ngày</th>
                 <th>Người truy cập</th>
+                <th>Phiên</th>
+                <th>Lượt nhấn APK</th>
               </tr>
             </thead>
             <tbody>
@@ -235,6 +311,8 @@ function Chart({ daily }: { daily: AnalyticsReady["daily"] }) {
                 <tr key={day.date}>
                   <td>{dateLabel(day.date)}</td>
                   <td>{count(day.users)}</td>
+                  <td>{count(day.sessions)}</td>
+                  <td>{count(day.apkClicks)}</td>
                 </tr>
               ))}
             </tbody>
@@ -283,9 +361,23 @@ export function WebsiteAnalytics() {
       )}
     </div>
   );
+  const reportPlaceholder = (...ids: string[]) =>
+    ids.some((id) => data?.availability[id]?.state === "unavailable") ? (
+      <div className={s.placeholder}>
+        GA4 chưa cung cấp báo cáo này. Xem lý do ở thông báo phía trên; không
+        coi dữ liệu thiếu là số 0.
+      </div>
+    ) : (
+      placeholder
+    );
   const campaignRows = data?.campaigns || [];
   const [campaignLimit, setCampaignLimit] = useState(10);
   const [pageLimit, setPageLimit] = useState(10);
+  const [trafficLimit, setTrafficLimit] = useState(15);
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const trafficRows = (data?.traffic || []).filter(
+    (row) => sourceFilter === "all" || row.category === sourceFilter,
+  );
   function setPeriod(value: string) {
     setPreset(value);
     setDateError("");
@@ -296,6 +388,7 @@ export function WebsiteAnalytics() {
     setDraft(next);
     setCampaignLimit(10);
     setPageLimit(10);
+    setTrafficLimit(15);
   }
   return (
     <div className={s.page} aria-busy={resource.loading}>
@@ -350,6 +443,7 @@ export function WebsiteAnalytics() {
                 setRange({ ...draft });
               setCampaignLimit(10);
               setPageLimit(10);
+              setTrafficLimit(15);
             } catch {
               setDateError(
                 "Chọn khoảng ngày hợp lệ, tối đa 366 ngày và không vượt ngày hiện tại.",
@@ -406,31 +500,73 @@ export function WebsiteAnalytics() {
           {warning}
         </p>
       ))}
+      {data?.provisional && (
+        <p className={s.warning} role="status">
+          Khoảng ngày có hôm nay: số liệu và attribution chưa hoàn tất, có thể
+          thay đổi. So sánh kỳ trước chỉ mang tính tạm thời.
+        </p>
+      )}
+      {data?.empty && (
+        <p className={s.notice} role="status">
+          GA4 trả báo cáo tổng rỗng: chưa ghi nhận dữ liệu trong khoảng ngày
+          này. Không xác nhận rằng việc xử lý đã hoàn tất.
+        </p>
+      )}
       <div className={s.kpis}>
         <Metric
-          label="Total Visitors"
-          subtitle="Tổng người truy cập · totalUsers"
+          label="Tổng người truy cập"
+          subtitle="Tổng người dùng theo GA4"
           icon={<Users size={20} />}
           metric={data?.kpis.users}
           state={status}
         />
         <Metric
-          label="Sessions"
-          subtitle="Phiên truy cập"
+          label="Người dùng mới"
+          subtitle="Người truy cập lần đầu"
+          icon={<Users size={20} />}
+          metric={data?.kpis.newUsers}
+          state={status}
+        />
+        <Metric
+          label="Phiên truy cập"
+          subtitle="Phiên bắt đầu trên website"
           icon={<Activity size={20} />}
           metric={data?.kpis.sessions}
           state={status}
         />
         <Metric
-          label="APK Download Clicks"
-          subtitle="Lượt nhấn tải APK"
+          label="Tổng lượt xem trang"
+          subtitle="Bao gồm các lần xem lại"
+          icon={<Globe size={20} />}
+          metric={data?.kpis.views}
+          state={status}
+        />
+        <Metric
+          label="Lượt nhấn tải APK"
+          subtitle="Đếm lần nhấn, không phải cài đặt"
           icon={<Download size={20} />}
           metric={data?.kpis.apk}
           state={status}
         />
         <Metric
-          label="Play Store Clicks"
-          subtitle="Lượt nhấn Google Play"
+          label="Tỷ lệ tương tác"
+          subtitle="Phiên có tương tác / tổng phiên"
+          icon={<Activity size={20} />}
+          metric={data?.kpis.engagementRate}
+          state={status}
+          format={percent}
+        />
+        <Metric
+          label="Thời gian tương tác trung bình"
+          subtitle="Trên mỗi người dùng hoạt động"
+          icon={<Activity size={20} />}
+          metric={data?.kpis.averageEngagementTime}
+          state={status}
+          format={seconds}
+        />
+        <Metric
+          label="Lượt nhấn Google Play"
+          subtitle="Lượt nhấn mở cửa hàng"
           icon={<ExternalLink size={20} />}
           metric={data?.kpis.play}
           state={status}
@@ -438,19 +574,12 @@ export function WebsiteAnalytics() {
       </div>
       <div className={s.grid}>
         <Panel
-          title="Traffic Overview"
+          title="Xu hướng truy cập"
           subtitle="Người truy cập theo ngày"
           className={s.wide}
         >
           {data ? (
-            data.daily.some((day) => day.users > 0) ? (
-              <Chart key={`${range.start}:${range.end}`} daily={data.daily} />
-            ) : (
-              <div className={s.placeholder}>
-                <Activity size={26} />
-                <p>GA4 chưa ghi nhận người truy cập trong khoảng ngày này.</p>
-              </div>
-            )
+            <Chart key={range.start + ":" + range.end} daily={data.daily} />
           ) : (
             placeholder
           )}
@@ -460,7 +589,7 @@ export function WebsiteAnalytics() {
           </p>
         </Panel>
         <Panel
-          title="Top Traffic Sources"
+          title="Nguồn truy cập"
           subtitle="Nguồn của phiên · tỷ trọng trên tổng người truy cập"
         >
           {data ? (
@@ -470,7 +599,7 @@ export function WebsiteAnalytics() {
                   <div>
                     <span>
                       <i className={s.sourceDot}>
-                        {["D", "f", "@", "♪", "G", "↗"][i]}
+                        {["D", "f", "@", "♪", "G", "↗", "?", "–"][i]}
                       </i>
                       {source.name}
                     </span>
@@ -481,8 +610,12 @@ export function WebsiteAnalytics() {
                   </div>
                   <progress
                     aria-label={`${source.name}: ${count(source.users)} người truy cập`}
-                    max={Math.max(1, data.kpis.users.value, source.users)}
-                    value={source.users}
+                    max={Math.max(
+                      1,
+                      data.kpis.users.value ?? 0,
+                      source.users ?? 0,
+                    )}
+                    value={source.users ?? 0}
                   />
                 </div>
               ))}
@@ -492,11 +625,106 @@ export function WebsiteAnalytics() {
           )}
           <p className={s.note}>
             Một người có thể thuộc nhiều nguồn; tỷ lệ không bắt buộc cộng thành
-            100%. Social chưa rõ nguồn nằm trong Other sources.
+            100%. Nguồn chưa có attribution và (not set) được hiển thị riêng.
           </p>
         </Panel>
         <Panel
-          title="Campaign Performance"
+          title="Hiệu quả nguồn truy cập"
+          subtitle="Traffic Source Performance · tổng hợp theo source/medium, không chia campaign"
+          className={s.full}
+        >
+          <label className={s.sourceFilter}>
+            Nhóm nguồn{" "}
+            <select
+              value={sourceFilter}
+              onChange={(event) => {
+                setSourceFilter(event.target.value);
+                setTrafficLimit(15);
+              }}
+            >
+              {[
+                "all",
+                "Facebook",
+                "TikTok",
+                "Threads",
+                "Google",
+                "Direct",
+                "Other",
+                "(data not available)",
+                "(not set)",
+              ].map((name) => (
+                <option key={name} value={name}>
+                  {name === "all" ? "Tất cả" : name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {data ? (
+            trafficRows.length ? (
+              <>
+                <div className={s.tableWrap}>
+                  <table>
+                    <thead>
+                      <tr>
+                        {[
+                          "Source / Medium",
+                          "Nhóm nguồn",
+                          "Phiên",
+                          "Tổng người dùng",
+                          "Lượt nhấn APK",
+                          "Lượt nhấn APK / phiên",
+                        ].map((name) => (
+                          <th key={name}>{name}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trafficRows.slice(0, trafficLimit).map((row, i) => (
+                        <tr key={i}>
+                          <td>
+                            <strong>{row.source || "(not set)"}</strong>
+                            <small>{row.medium || "(not set)"}</small>
+                          </td>
+                          <td>{row.category}</td>
+                          <td>{count(row.sessions)}</td>
+                          <td>{count(row.users)}</td>
+                          <td>{count(row.apkClicks)}</td>
+                          <td>{decimal(row.clicksPerSession)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {trafficRows.length > trafficLimit && (
+                  <button
+                    className={s.more}
+                    onClick={() => setTrafficLimit((n) => n + 20)}
+                  >
+                    Xem thêm
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className={s.placeholder}>
+                {["trafficSessions", "trafficClicks"].some(
+                  (id) => data.availability[id]?.state === "unavailable",
+                )
+                  ? "GA4 chưa cung cấp dữ liệu nguồn truy cập; xem lý do ở thông báo phía trên."
+                  : "Chưa có dòng dữ liệu cho nhóm nguồn này."}
+              </div>
+            )
+          ) : (
+            placeholder
+          )}
+          <p className={s.note}>
+            Users được GA4 tính trực tiếp theo source/medium, không cộng từ
+            campaign. Một người có thể thuộc nhiều nguồn. Lượt nhấn APK / phiên
+            là số lần nhấn trung bình trên phiên, không phải tỷ lệ chuyển đổi. —
+            nghĩa là chưa có chỉ số hợp lệ.
+          </p>
+        </Panel>
+        <Panel
+          title="Chiến dịch UTM chi tiết"
           subtitle="Session attribution · theo dõi UTM source, medium, campaign và content"
           className={s.full}
         >
@@ -509,11 +737,11 @@ export function WebsiteAnalytics() {
                       <tr>
                         {[
                           "Source / Medium",
-                          "Campaign",
-                          "UTM Content",
-                          "Sessions",
-                          "APK Clicks",
-                          "Click-through Rate",
+                          "Chiến dịch",
+                          "Nội dung UTM",
+                          "Phiên",
+                          "Lượt nhấn APK",
+                          "Lượt nhấn APK / phiên",
                         ].map((label) => (
                           <th key={label}>{label}</th>
                         ))}
@@ -534,7 +762,7 @@ export function WebsiteAnalytics() {
                             <td>{count(campaign.apkClicks)}</td>
                             <td>
                               <span className={s.rate}>
-                                {percent(campaign.clickRate)}
+                                {decimal(campaign.clicksPerSession)}
                               </span>
                             </td>
                           </tr>
@@ -552,22 +780,23 @@ export function WebsiteAnalytics() {
                 )}
               </>
             ) : (
-              placeholder
+              reportPlaceholder("campaignSessions", "campaignClicks")
             )
           ) : (
-            placeholder
+            reportPlaceholder("campaignSessions", "campaignClicks")
           )}
           <p className={s.note}>
-            CTR = lượt nhấn APK / sessions. Có thể vượt 100% nếu nhấn nhiều lần;
-            không phải tỷ lệ cài đặt. Không có sessions thì tỷ lệ là —.
+            APK Clicks per Session = lượt nhấn APK / phiên. Giá trị có thể lớn
+            hơn 1 khi nhấn nhiều lần; không phải tỷ lệ chuyển đổi hoặc cài đặt.
+            Không có phiên thì chỉ số là —.
           </p>
         </Panel>
         <Panel
-          title="Download Actions"
+          title="Hành động tải ứng dụng"
           subtitle="Hai đường tải ứng dụng song song"
         >
           <div className={s.landing}>
-            <span>Landing Page Visitors</span>
+            <span>Người xem trang chính</span>
             <strong>{data ? count(data.actions.visitors) : "—"}</strong>
             <small>Người xem trang chính /</small>
           </div>
@@ -614,7 +843,7 @@ export function WebsiteAnalytics() {
           </p>
         </Panel>
         <Panel
-          title="Top Landing Pages"
+          title="Top Pages · Trang được xem nhiều"
           subtitle="Lượt xem theo đường dẫn trang thực tế"
           className={s.wide}
         >
@@ -661,7 +890,7 @@ export function WebsiteAnalytics() {
               )}
             </>
           ) : (
-            placeholder
+            reportPlaceholder("pages")
           )}
           <p className={s.note}>
             Views = screenPageViews theo pagePath; đây là lượt xem trang, không

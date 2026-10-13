@@ -33,6 +33,7 @@ export function analyticsRange(start, end, today = analyticsToday()) {
   };
 }
 export function percentageChange(value, previous) {
+  if (value === null || previous === null) return null;
   return previous === 0
     ? value === 0
       ? 0
@@ -40,5 +41,26 @@ export function percentageChange(value, previous) {
     : ((value - previous) / previous) * 100;
 }
 export function ratio(value, total) {
-  return total ? (value / total) * 100 : null;
+  return value !== null && total ? (value / total) * 100 : null;
+}
+export function sourceCategory(source, medium = "") {
+  const value = source.trim().toLowerCase();
+  const channel = medium.trim().toLowerCase();
+  if (value === "(data not available)" || channel === "(data not available)")
+    return "(data not available)";
+  if (!value || !channel || value === "(not set)" || channel === "(not set)")
+    return "(not set)";
+  if (value === "(direct)" && ["(none)", "none"].includes(channel))
+    return "Direct";
+  if (/^(facebook|fb|facebook\.com|[a-z0-9.-]+\.facebook\.com)$/.test(value))
+    return "Facebook";
+  if (
+    /^(threads|threads\.(net|com)|[a-z0-9.-]+\.threads\.(net|com))$/.test(value)
+  )
+    return "Threads";
+  if (/^(tiktok|tiktok\.com|[a-z0-9.-]+\.tiktok\.com)$/.test(value))
+    return "TikTok";
+  if (/^(google|google\.[a-z.]+|[a-z0-9.-]+\.google\.[a-z.]+)$/.test(value))
+    return "Google";
+  return "Other";
 }

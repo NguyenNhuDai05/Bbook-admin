@@ -94,6 +94,7 @@
   color: var(--muted);
   font-weight: 550;
   margin: 0;
+  line-height: 1.5;
 }
 .metricIcon {
   display: flex;
@@ -495,6 +496,43 @@
   border: 0;
   cursor: pointer;
   font-size: 12px;
+}
+.chartTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.chartTabs button {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.chartTabs button[aria-pressed="true"] {
+  background: var(--pink-soft);
+  color: #b82560;
+  border-color: #f7cede;
+}
+.sourceFilter {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.sourceFilter select {
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
 }
 @media (max-width: 1150px) {
   .kpis {
