@@ -158,6 +158,94 @@ test("missing stream does not request unfiltered GA4 data", async () => {
   assert.equal((await load({ realtime: true })).status, "not_connected");
   assert.equal(calls, 0);
 });
+
+test("page views use the views metric and reject user counts as views", () => {
+  const request = realtimeRequest("456", 30, true, "screenPageViews");
+  assert.deepEqual(request.metrics, [{ name: "screenPageViews" }]);
+  assert.equal(request.minuteRanges[0].startMinutesAgo, 29);
+  const value = report(12, true);
+  assert.throws(
+    () => parseRealtime(value, true, "screenPageViews"),
+    /response/,
+  );
+  value.metricHeaders = [{ name: "screenPageViews" }];
+  value.dimensionHeaders.unshift({ name: "dateRange" });
+  value.rows[0].dimensionValues.unshift({ value: "recent" });
+  const minutes = parseRealtime(value, true, "screenPageViews");
+  assert.deepEqual(minutes[29], { minutesAgo: 0, views: 12 });
+  assert.equal(minutes[0].views, 0);
+  assert.equal(
+    parseRealtime(
+      { kind: "analyticsData#runRealtimeReport" },
+      false,
+      "screenPageViews",
+    ),
+    0,
+  );
+  assert.throws(() => realtimeRequest("456", 30, false, "unknown"), /config/);
+});
+
+test("views and active users have independent cache and duplicate requests coalesce", async () => {
+  let calls = 0,
+    tokens = 0;
+  const load = createAnalyticsService({
+    environment: env,
+    fetchImpl: async (url, options) => {
+      if (url.includes("oauth2")) {
+        tokens++;
+        return Response.json({ access_token: "fake", expires_in: 3600 });
+      }
+      calls++;
+      const request = JSON.parse(options.body);
+      const views = request.metrics[0].name === "screenPageViews";
+      const value = report(views ? 12 : 2, request.dimensions.length > 0);
+      value.metricHeaders = request.metrics;
+      assert.equal(
+        request.dimensionFilter.andGroup.expressions[0].filter.stringFilter
+          .value,
+        "456",
+      );
+      return Response.json(value);
+    },
+  });
+  const [views, duplicate, users] = await Promise.all([
+    load({ realtime: true, metric: "screenPageViews" }),
+    load({ realtime: true, metric: "screenPageViews" }),
+    load({ realtime: true }),
+  ]);
+  assert.deepEqual(views, duplicate);
+  assert.equal(views.views30, 12);
+  assert.equal(views.views5, 12);
+  assert.equal(views.active30, undefined);
+  assert.equal(users.active30, 2);
+  assert.equal(users.views30, undefined);
+  assert.equal(calls, 6);
+  assert.equal(tokens, 1);
+  await load({ realtime: true, metric: "screenPageViews" });
+  assert.equal(calls, 6);
+});
+
+test("page view quota failure remains an error and is not cached as zero", async () => {
+  let calls = 0;
+  const load = createAnalyticsService({
+    environment: env,
+    fetchImpl: async (url) => {
+      if (url.includes("oauth2"))
+        return Response.json({ access_token: "fake", expires_in: 3600 });
+      calls++;
+      return Response.json({}, { status: 429 });
+    },
+  });
+  await assert.rejects(
+    load({ realtime: true, metric: "screenPageViews" }),
+    (error) => error.code === "quota",
+  );
+  await assert.rejects(
+    load({ realtime: true, metric: "screenPageViews" }),
+    (error) => error.code === "quota",
+  );
+  assert.equal(calls, 6);
+});
 test("realtime authorization precedes load and errors never return fake zero or credentials", async () => {
   let calls = 0;
   const request = new Request("https://admin.test/api/analytics/realtime");

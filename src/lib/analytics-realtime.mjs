@@ -1,9 +1,16 @@
 import { AnalyticsError } from "./analytics-data.mjs";
 
-export function realtimeRequest(streamId, minutes, timeline = false) {
+export function realtimeRequest(
+  streamId,
+  minutes,
+  timeline = false,
+  metric = "activeUsers",
+) {
+  if (!["activeUsers", "screenPageViews"].includes(metric))
+    throw new AnalyticsError("config");
   return {
     dimensions: timeline ? [{ name: "minutesAgo" }] : [],
-    metrics: [{ name: "activeUsers" }],
+    metrics: [{ name: metric }],
     minuteRanges: [
       { name: "recent", startMinutesAgo: minutes - 1, endMinutesAgo: 0 },
     ],
@@ -29,7 +36,13 @@ export function realtimeRequest(streamId, minutes, timeline = false) {
   };
 }
 
-export function parseRealtime(report, timeline = false) {
+export function parseRealtime(
+  report,
+  timeline = false,
+  metric = "activeUsers",
+) {
+  if (!["activeUsers", "screenPageViews"].includes(metric))
+    throw new AnalyticsError("config");
   if (!report || typeof report !== "object")
     throw new AnalyticsError("response");
   const rows = report.rows ?? [];
@@ -50,7 +63,7 @@ export function parseRealtime(report, timeline = false) {
     (!confirmedEmpty && report.metricHeaders?.length !== 1) ||
     (report.metricHeaders?.length &&
       (report.metricHeaders.length !== 1 ||
-        report.metricHeaders[0].name !== "activeUsers")) ||
+        report.metricHeaders[0].name !== metric)) ||
     !Array.isArray(headers) ||
     new Set(names).size !== names.length ||
     names.some(
@@ -98,7 +111,8 @@ export function parseRealtime(report, timeline = false) {
   return timeline
     ? Array.from({ length: 30 }, (_, i) => ({
         minutesAgo: 29 - i,
-        users: points.get(29 - i) ?? 0,
+        [metric === "screenPageViews" ? "views" : "users"]:
+          points.get(29 - i) ?? 0,
       }))
     : (points.get(0) ?? 0);
 }
