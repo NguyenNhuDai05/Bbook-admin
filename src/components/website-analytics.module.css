@@ -581,3 +581,26 @@
     gap: 8px;
   }
 }
+.liveTotals {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.liveTotals div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.liveTotals strong {
+  font-size: 32px;
+  color: #ee4f8f;
+}
+.liveTotals span {
+  font-size: 13px;
+}
+.liveChart {
+  width: 100%;
+  min-height: 180px;
+  display: block;
+}

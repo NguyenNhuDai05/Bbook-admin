@@ -1,5 +1,6 @@
 "use client";
 import { useId, useState, type ReactNode } from "react";
+import { RealtimeActivity } from "./analytics-realtime";
 import {
   Activity,
   ArrowDownRight,
@@ -121,7 +122,14 @@ function Metric({
     </section>
   );
 }
-function Chart({ daily }: { daily: AnalyticsReady["daily"] }) {
+function Chart({
+  daily,
+  placeholder,
+}: {
+  daily: AnalyticsReady["daily"];
+  placeholder: ReactNode;
+}) {
+  const [realtime, setRealtime] = useState(false);
   const [metric, setMetric] = useState<"users" | "sessions" | "apkClicks">(
     "users",
   );
@@ -160,165 +168,186 @@ function Chart({ daily }: { daily: AnalyticsReady["daily"] }) {
           <button
             key={key}
             type="button"
-            aria-pressed={metric === key}
+            aria-pressed={!realtime && metric === key}
             onClick={() => {
               setMetric(key);
+              setRealtime(false);
               setSelected(null);
             }}
           >
             {labels[key]}
           </button>
         ))}
-      </div>
-      {daily.every((day) => day[metric] === null) ? (
-        <div className={s.placeholder}>
-          GA4 chưa cung cấp {labels[metric].toLowerCase()}; không hiển thị đường
-          biểu đồ giả.
-        </div>
-      ) : (
-        <div
-          className={s.chart}
-          role="group"
-          aria-label={labels[metric] + " theo ngày"}
+        <button
+          type="button"
+          aria-pressed={realtime}
+          onClick={() => setRealtime(true)}
         >
-          <div className={s.yAxis}>
-            {[1, 0.75, 0.5, 0.25, 0].map((ratio) => (
-              <span key={ratio}>{count(ceiling * ratio)}</span>
-            ))}
-          </div>
-          <div
-            className={s.plot}
-            onPointerMove={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect();
-              setSelected(
-                Math.max(
-                  0,
-                  Math.min(
-                    daily.length - 1,
-                    Math.floor(
-                      ((event.clientX - rect.left) / rect.width) * daily.length,
-                    ),
-                  ),
-                ),
-              );
-            }}
-            onPointerLeave={() => setSelected(null)}
-          >
-            <div className={s.gridlines} aria-hidden="true">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <i key={i} />
-              ))}
+          Người hoạt động
+        </button>
+      </div>
+      {realtime ? (
+        <RealtimeActivity />
+      ) : (
+        <>
+          {!daily.length ? (
+            placeholder
+          ) : daily.every((day) => day[metric] === null) ? (
+            <div className={s.placeholder}>
+              GA4 chưa cung cấp {labels[metric].toLowerCase()}; không hiển thị
+              đường biểu đồ giả.
             </div>
-            <svg
-              viewBox="0 0 1000 240"
-              preserveAspectRatio="none"
-              aria-hidden="true"
+          ) : (
+            <div
+              className={s.chart}
+              role="group"
+              aria-label={labels[metric] + " theo ngày"}
             >
-              <defs>
-                <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
-                  <stop stopColor="#ff5c9a" stopOpacity=".28" />
-                  <stop offset="1" stopColor="#ff5c9a" stopOpacity=".02" />
-                </linearGradient>
-              </defs>
-              {segments.map((part, i) => (
-                <g key={i}>
-                  {part.length > 1 ? (
-                    <>
-                      <polygon
-                        points={
-                          part[0].x +
-                          ",240 " +
-                          part.map((p) => p.x + "," + p.y).join(" ") +
-                          " " +
-                          part[part.length - 1].x +
-                          ",240"
-                        }
-                        fill={"url(#" + gradient + ")"}
-                      />
-                      <polyline
-                        points={part.map((p) => p.x + "," + p.y).join(" ")}
-                        fill="none"
-                        stroke="#ee4f8f"
-                        strokeWidth="2.5"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                    </>
-                  ) : (
-                    <circle
-                      cx={part[0].x}
-                      cy={part[0].y}
-                      r="4"
-                      fill="#ee4f8f"
-                    />
-                  )}
-                </g>
-              ))}
-            </svg>
-            {current && (
-              <div
-                className={s.tooltip}
-                role="status"
-                style={{
-                  left:
-                    "clamp(82px, " +
-                    ((selected! + 0.5) / daily.length) * 100 +
-                    "%, calc(100% - 82px))",
-                }}
-              >
-                {dateLabel(current.date)}
-                <strong>
-                  {count(current[metric])} · {labels[metric]}
-                </strong>
+              <div className={s.yAxis}>
+                {[1, 0.75, 0.5, 0.25, 0].map((ratio) => (
+                  <span key={ratio}>{count(ceiling * ratio)}</span>
+                ))}
               </div>
-            )}
-            <div className={s.xAxis}>
-              {daily.map(
-                (day, i) =>
-                  (i === 0 ||
-                    i === daily.length - 1 ||
-                    i % Math.max(1, Math.ceil(daily.length / 5)) === 0) && (
-                    <span
-                      key={day.date}
-                      style={{
-                        left:
-                          "clamp(20px, " +
-                          ((i + 0.5) / daily.length) * 100 +
-                          "%, calc(100% - 20px))",
-                      }}
-                    >
-                      {day.date.slice(5).split("-").reverse().join("/")}
-                    </span>
-                  ),
-              )}
+              <div
+                className={s.plot}
+                onPointerMove={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  setSelected(
+                    Math.max(
+                      0,
+                      Math.min(
+                        daily.length - 1,
+                        Math.floor(
+                          ((event.clientX - rect.left) / rect.width) *
+                            daily.length,
+                        ),
+                      ),
+                    ),
+                  );
+                }}
+                onPointerLeave={() => setSelected(null)}
+              >
+                <div className={s.gridlines} aria-hidden="true">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <i key={i} />
+                  ))}
+                </div>
+                <svg
+                  viewBox="0 0 1000 240"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
+                      <stop stopColor="#ff5c9a" stopOpacity=".28" />
+                      <stop offset="1" stopColor="#ff5c9a" stopOpacity=".02" />
+                    </linearGradient>
+                  </defs>
+                  {segments.map((part, i) => (
+                    <g key={i}>
+                      {part.length > 1 ? (
+                        <>
+                          <polygon
+                            points={
+                              part[0].x +
+                              ",240 " +
+                              part.map((p) => p.x + "," + p.y).join(" ") +
+                              " " +
+                              part[part.length - 1].x +
+                              ",240"
+                            }
+                            fill={"url(#" + gradient + ")"}
+                          />
+                          <polyline
+                            points={part.map((p) => p.x + "," + p.y).join(" ")}
+                            fill="none"
+                            stroke="#ee4f8f"
+                            strokeWidth="2.5"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        </>
+                      ) : (
+                        <circle
+                          cx={part[0].x}
+                          cy={part[0].y}
+                          r="4"
+                          fill="#ee4f8f"
+                        />
+                      )}
+                    </g>
+                  ))}
+                </svg>
+                {current && (
+                  <div
+                    className={s.tooltip}
+                    role="status"
+                    style={{
+                      left:
+                        "clamp(82px, " +
+                        ((selected! + 0.5) / daily.length) * 100 +
+                        "%, calc(100% - 82px))",
+                    }}
+                  >
+                    {dateLabel(current.date)}
+                    <strong>
+                      {count(current[metric])} · {labels[metric]}
+                    </strong>
+                  </div>
+                )}
+                <div className={s.xAxis}>
+                  {daily.map(
+                    (day, i) =>
+                      (i === 0 ||
+                        i === daily.length - 1 ||
+                        i % Math.max(1, Math.ceil(daily.length / 5)) === 0) && (
+                        <span
+                          key={day.date}
+                          style={{
+                            left:
+                              "clamp(20px, " +
+                              ((i + 0.5) / daily.length) * 100 +
+                              "%, calc(100% - 20px))",
+                          }}
+                        >
+                          {day.date.slice(5).split("-").reverse().join("/")}
+                        </span>
+                      ),
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+          <details className={s.details}>
+            <summary>Xem dữ liệu theo ngày</summary>
+            <div className={s.tableWrap}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ngày</th>
+                    <th>Người truy cập</th>
+                    <th>Phiên</th>
+                    <th>Lượt nhấn APK</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {daily.map((day) => (
+                    <tr key={day.date}>
+                      <td>{dateLabel(day.date)}</td>
+                      <td>{count(day.users)}</td>
+                      <td>{count(day.sessions)}</td>
+                      <td>{count(day.apkClicks)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+          <p className={s.note}>
+            Một người có thể truy cập nhiều ngày; không cộng các điểm thành tổng
+            người dùng duy nhất.
+          </p>
+        </>
       )}
-      <details className={s.details}>
-        <summary>Xem dữ liệu theo ngày</summary>
-        <div className={s.tableWrap}>
-          <table>
-            <thead>
-              <tr>
-                <th>Ngày</th>
-                <th>Người truy cập</th>
-                <th>Phiên</th>
-                <th>Lượt nhấn APK</th>
-              </tr>
-            </thead>
-            <tbody>
-              {daily.map((day) => (
-                <tr key={day.date}>
-                  <td>{dateLabel(day.date)}</td>
-                  <td>{count(day.users)}</td>
-                  <td>{count(day.sessions)}</td>
-                  <td>{count(day.apkClicks)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
     </>
   );
 }
@@ -500,12 +529,6 @@ export function WebsiteAnalytics() {
           {warning}
         </p>
       ))}
-      {data?.provisional && (
-        <p className={s.warning} role="status">
-          Khoảng ngày có hôm nay: số liệu và attribution chưa hoàn tất, có thể
-          thay đổi. So sánh kỳ trước chỉ mang tính tạm thời.
-        </p>
-      )}
       {data?.empty && (
         <p className={s.notice} role="status">
           GA4 trả báo cáo tổng rỗng: chưa ghi nhận dữ liệu trong khoảng ngày
@@ -543,7 +566,7 @@ export function WebsiteAnalytics() {
         />
         <Metric
           label="Lượt nhấn tải APK"
-          subtitle="Đếm lần nhấn, không phải cài đặt"
+          subtitle=""
           icon={<Download size={20} />}
           metric={data?.kpis.apk}
           state={status}
@@ -575,18 +598,14 @@ export function WebsiteAnalytics() {
       <div className={s.grid}>
         <Panel
           title="Xu hướng truy cập"
-          subtitle="Người truy cập theo ngày"
+          subtitle="Theo ngày hoặc người hoạt động gần đây"
           className={s.wide}
         >
-          {data ? (
-            <Chart key={range.start + ":" + range.end} daily={data.daily} />
-          ) : (
-            placeholder
-          )}
-          <p className={s.note}>
-            Một người có thể truy cập nhiều ngày; không cộng các điểm thành tổng
-            người dùng duy nhất.
-          </p>
+          <Chart
+            key={range.start + ":" + range.end}
+            daily={data?.daily ?? []}
+            placeholder={placeholder}
+          />
         </Panel>
         <Panel
           title="Nguồn truy cập"

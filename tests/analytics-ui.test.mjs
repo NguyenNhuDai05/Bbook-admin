@@ -29,6 +29,7 @@ const compiled = ts.transpileModule(
 function render(resource) {
   const compiledModule = { exports: {} };
   const mocks = {
+    "./analytics-realtime": { RealtimeActivity: () => null },
     "@/lib/client": {
       useResource: () => ({
         reload() {},
@@ -108,13 +109,15 @@ test("MVP zero-data UI renders seven required KPI labels, retained Play, trend s
     "Top Pages",
     "(data not available)",
     "(not set)",
-    "Khoảng ngày có hôm nay",
   ])
     assert.ok(html.includes(label), label);
   assert.ok(!html.includes("Click-through Rate"));
   assert.ok(!html.includes("Top Landing Pages"));
   assert.ok(html.includes('aria-pressed="true"'));
   assert.ok(html.includes("Xem dữ liệu theo ngày"));
+  assert.ok(html.includes("Người hoạt động"));
+  assert.ok(!html.includes("Đếm lần nhấn, không phải cài đặt"));
+  assert.ok(!html.includes("Khoảng ngày có hôm nay"));
 });
 test("unavailable metadata renders dash and explanation, while API error and disconnected have distinct states", () => {
   const unavailable = render({ data: snapshot("Processing pending") });
