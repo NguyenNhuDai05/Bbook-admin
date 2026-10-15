@@ -588,6 +588,30 @@ export function createAnalyticsService({
         message:
           "Chưa kết nối Google Analytics. Cần GA4_PROPERTY_ID và GOOGLE_APPLICATION_CREDENTIALS (file service account) hoặc GA4_SERVICE_ACCOUNT_JSON_BASE64 trên máy chủ Admin.",
       };
+    if (range.realtime) {
+      const streamId = environment().GA4_WEB_STREAM_ID;
+      if (!/^\d{1,20}$/.test(streamId ?? ""))
+        return {
+          status: "not_connected",
+          message:
+            "Cần cấu hình GA4_WEB_STREAM_ID của website trên máy chủ Admin để đọc người hoạt động realtime.",
+        };
+      const key = `${settings.identity}:realtime:${streamId}`;
+      const hit = cache.get(key);
+      if (hit && hit.expires > now()) return hit.value;
+      if (pending.has(key)) return pending.get(key);
+      if (pending.size >= 8) throw new AnalyticsError("busy");
+      const promise = runRealtime(settings, streamId).then((value) => {
+        remember(cache, key, { value, expires: now() + 25000 });
+        return value;
+      });
+      pending.set(key, promise);
+      try {
+        return await promise;
+      } finally {
+        pending.delete(key);
+      }
+    }
     const key = `${settings.identity}:${range.start}:${range.end}`;
     const hit = cache.get(key);
     if (hit && hit.expires > now()) return hit.value;
@@ -601,6 +625,52 @@ export function createAnalyticsService({
       pending.delete(key);
     }
   };
+  async function runRealtime(settings, streamId) {
+    const signal = AbortSignal.timeout(20000);
+    try {
+      const { realtimeRequest, parseRealtime } =
+        await import("./analytics-realtime.mjs");
+      const bearer = await token(settings, signal);
+      const reports = await Promise.all(
+        [
+          [30, false],
+          [5, false],
+          [30, true],
+        ].map(async ([minutes, timeline]) => {
+          const response = await fetchImpl(
+            `https://analyticsdata.googleapis.com/v1beta/properties/${settings.property}:runRealtimeReport`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${bearer}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(
+                realtimeRequest(streamId, minutes, timeline),
+              ),
+              cache: "no-store",
+              redirect: "error",
+              signal,
+            },
+          );
+          return parseRealtime(await readJson(response), timeline);
+        }),
+      );
+      return {
+        status: "ready",
+        active30: reports[0],
+        active5: reports[1],
+        minutes: reports[2],
+        fetchedAt: new Date(now()).toISOString(),
+      };
+    } catch (error) {
+      if (error instanceof AnalyticsError) {
+        if (error.code === "credentials") oauth = undefined;
+        throw error;
+      }
+      throw new AnalyticsError(signal.aborted ? "timeout" : "google");
+    }
+  }
   async function run(settings, range) {
     const signal = AbortSignal.timeout(55000);
     try {

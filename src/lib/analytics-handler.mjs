@@ -20,7 +20,10 @@ const messages = {
   timeout: "Google Analytics phản hồi quá chậm. Vui lòng thử lại.",
   google: "Không thể kết nối Google Analytics. Vui lòng thử lại.",
 };
-export async function handleAnalyticsRequest(request, { authorize, load }) {
+export async function handleAnalyticsRequest(
+  request,
+  { authorize, load, realtime = false },
+) {
   const response = (body, status = 200) =>
     Response.json(body, {
       status,
@@ -51,15 +54,24 @@ export async function handleAnalyticsRequest(request, { authorize, load }) {
   const query = new URL(request.url).searchParams;
   let range;
   try {
-    if (query.getAll("start").length !== 1 || query.getAll("end").length !== 1)
-      throw new Error("date");
-    range = analyticsRange(query.get("start"), query.get("end"));
+    if (realtime) {
+      if (query.size) throw new Error("query");
+      range = { realtime: true };
+    } else {
+      if (
+        query.getAll("start").length !== 1 ||
+        query.getAll("end").length !== 1
+      )
+        throw new Error("date");
+      range = analyticsRange(query.get("start"), query.get("end"));
+    }
   } catch {
     return response(
       {
         status: "error",
-        message:
-          "Khoảng ngày không hợp lệ. Chọn tối đa 366 ngày và không vượt ngày hiện tại.",
+        message: realtime
+          ? "Yêu cầu realtime không hợp lệ."
+          : "Khoảng ngày không hợp lệ. Chọn tối đa 366 ngày và không vượt ngày hiện tại.",
       },
       400,
     );
