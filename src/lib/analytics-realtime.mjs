@@ -4,7 +4,9 @@ export function realtimeRequest(streamId, minutes, timeline = false) {
   return {
     dimensions: timeline ? [{ name: "minutesAgo" }] : [],
     metrics: [{ name: "activeUsers" }],
-    minuteRanges: [{ startMinutesAgo: minutes - 1, endMinutesAgo: 0 }],
+    minuteRanges: [
+      { name: "recent", startMinutesAgo: minutes - 1, endMinutesAgo: 0 },
+    ],
     dimensionFilter: {
       andGroup: {
         expressions: [
@@ -28,15 +30,35 @@ export function realtimeRequest(streamId, minutes, timeline = false) {
 }
 
 export function parseRealtime(report, timeline = false) {
-  if (
-    report?.metricHeaders?.length !== 1 ||
-    report.metricHeaders[0].name !== "activeUsers" ||
-    (timeline &&
-      (report.dimensionHeaders?.length !== 1 ||
-        report.dimensionHeaders[0].name !== "minutesAgo"))
-  )
+  if (!report || typeof report !== "object")
     throw new AnalyticsError("response");
   const rows = report.rows ?? [];
+  const headers = report.dimensionHeaders ?? [];
+  // Protobuf JSON may omit default-valued fields on an empty report. Only
+  // accept omitted headers when Google's report discriminator confirms it.
+  const confirmedEmpty =
+    report.kind === "analyticsData#runRealtimeReport" &&
+    Array.isArray(rows) &&
+    rows.length === 0 &&
+    (report.rowCount ?? 0) === 0;
+  const names = Array.isArray(headers)
+    ? headers.map((header) => header?.name)
+    : [];
+  const minuteIndex = names.indexOf("minutesAgo");
+  const rangeIndex = names.indexOf("dateRange");
+  if (
+    (!confirmedEmpty && report.metricHeaders?.length !== 1) ||
+    (report.metricHeaders?.length &&
+      (report.metricHeaders.length !== 1 ||
+        report.metricHeaders[0].name !== "activeUsers")) ||
+    !Array.isArray(headers) ||
+    new Set(names).size !== names.length ||
+    names.some(
+      (name) => name !== "dateRange" && !(timeline && name === "minutesAgo"),
+    ) ||
+    (timeline && minuteIndex < 0 && !confirmedEmpty)
+  )
+    throw new AnalyticsError("response");
   if (
     !Array.isArray(rows) ||
     (report.rowCount ?? rows.length) !== rows.length ||
@@ -45,10 +67,22 @@ export function parseRealtime(report, timeline = false) {
     throw new AnalyticsError("response");
   const points = new Map();
   for (const row of rows) {
+    if (
+      (row.dimensionValues ?? []).length !== headers.length ||
+      row.metricValues?.length !== 1
+    )
+      throw new AnalyticsError("response");
+    if (
+      rangeIndex >= 0 &&
+      !["recent", "date_range_0"].includes(
+        row.dimensionValues[rangeIndex]?.value,
+      )
+    )
+      throw new AnalyticsError("response");
     const raw = row.metricValues?.[0]?.value;
     if (!/^\d+$/.test(raw ?? "") || !Number.isSafeInteger(Number(raw)))
       throw new AnalyticsError("response");
-    const rawMinute = row.dimensionValues?.[0]?.value;
+    const rawMinute = row.dimensionValues?.[minuteIndex]?.value;
     if (timeline && !/^\d{1,2}$/.test(rawMinute ?? ""))
       throw new AnalyticsError("response");
     const minute = timeline ? Number(rawMinute) : 0;

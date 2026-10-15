@@ -653,7 +653,29 @@ export function createAnalyticsService({
               signal,
             },
           );
-          return parseRealtime(await readJson(response), timeline);
+          const report = await readJson(response);
+          try {
+            return parseRealtime(report, timeline);
+          } catch (error) {
+            // Shape only: never log response rows, credentials, OAuth tokens,
+            // property/stream identity, or the Google response body.
+            console.warn("GA4 realtime response shape rejected", {
+              minutes,
+              timeline,
+              dimensions: Array.isArray(report?.dimensionHeaders)
+                ? report.dimensionHeaders.map((header) => header?.name)
+                : undefined,
+              metrics: Array.isArray(report?.metricHeaders)
+                ? report.metricHeaders.map((header) => header?.name)
+                : undefined,
+              rowCount: report?.rowCount,
+              returnedRows: Array.isArray(report?.rows)
+                ? report.rows.length
+                : undefined,
+              kind: report?.kind,
+            });
+            throw error;
+          }
         }),
       );
       return {
