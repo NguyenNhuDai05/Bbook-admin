@@ -129,7 +129,7 @@ function Chart({
   daily: AnalyticsReady["daily"];
   placeholder: ReactNode;
 }) {
-  const [realtime, setRealtime] = useState(false);
+  const [realtime, setRealtime] = useState<"users" | "views" | null>(null);
   const [metric, setMetric] = useState<"users" | "sessions" | "apkClicks">(
     "users",
   );
@@ -171,7 +171,7 @@ function Chart({
             aria-pressed={!realtime && metric === key}
             onClick={() => {
               setMetric(key);
-              setRealtime(false);
+              setRealtime(null);
               setSelected(null);
             }}
           >
@@ -180,14 +180,21 @@ function Chart({
         ))}
         <button
           type="button"
-          aria-pressed={realtime}
-          onClick={() => setRealtime(true)}
+          aria-pressed={realtime === "users"}
+          onClick={() => setRealtime("users")}
         >
           Người hoạt động
         </button>
+        <button
+          type="button"
+          aria-pressed={realtime === "views"}
+          onClick={() => setRealtime("views")}
+        >
+          Lượt xem trang
+        </button>
       </div>
       {realtime ? (
-        <RealtimeActivity />
+        <RealtimeActivity key={realtime} mode={realtime} />
       ) : (
         <>
           {!daily.length ? (

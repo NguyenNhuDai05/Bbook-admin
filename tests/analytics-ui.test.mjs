@@ -116,6 +116,7 @@ test("MVP zero-data UI renders seven required KPI labels, retained Play, trend s
   assert.ok(html.includes('aria-pressed="true"'));
   assert.ok(html.includes("Xem dữ liệu theo ngày"));
   assert.ok(html.includes("Người hoạt động"));
+  assert.ok(html.includes("Lượt xem trang"));
   assert.ok(!html.includes("Đếm lần nhấn, không phải cài đặt"));
   assert.ok(!html.includes("Khoảng ngày có hôm nay"));
 });

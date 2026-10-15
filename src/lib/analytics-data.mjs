@@ -589,19 +589,22 @@ export function createAnalyticsService({
           "Chưa kết nối Google Analytics. Cần GA4_PROPERTY_ID và GOOGLE_APPLICATION_CREDENTIALS (file service account) hoặc GA4_SERVICE_ACCOUNT_JSON_BASE64 trên máy chủ Admin.",
       };
     if (range.realtime) {
+      const metric = range.metric ?? "activeUsers";
+      if (!["activeUsers", "screenPageViews"].includes(metric))
+        throw new AnalyticsError("config");
       const streamId = environment().GA4_WEB_STREAM_ID;
       if (!/^\d{1,20}$/.test(streamId ?? ""))
         return {
           status: "not_connected",
           message:
-            "Cần cấu hình GA4_WEB_STREAM_ID của website trên máy chủ Admin để đọc người hoạt động realtime.",
+            "Cần cấu hình GA4_WEB_STREAM_ID của website trên máy chủ Admin để đọc dữ liệu realtime.",
         };
-      const key = `${settings.identity}:realtime:${streamId}`;
+      const key = `${settings.identity}:realtime:${streamId}:${metric}`;
       const hit = cache.get(key);
       if (hit && hit.expires > now()) return hit.value;
       if (pending.has(key)) return pending.get(key);
       if (pending.size >= 8) throw new AnalyticsError("busy");
-      const promise = runRealtime(settings, streamId).then((value) => {
+      const promise = runRealtime(settings, streamId, metric).then((value) => {
         remember(cache, key, { value, expires: now() + 25000 });
         return value;
       });
@@ -625,7 +628,7 @@ export function createAnalyticsService({
       pending.delete(key);
     }
   };
-  async function runRealtime(settings, streamId) {
+  async function runRealtime(settings, streamId, metric) {
     const signal = AbortSignal.timeout(20000);
     try {
       const { realtimeRequest, parseRealtime } =
@@ -646,7 +649,7 @@ export function createAnalyticsService({
                 "Content-Type": "application/json",
               },
               body: JSON.stringify(
-                realtimeRequest(streamId, minutes, timeline),
+                realtimeRequest(streamId, minutes, timeline, metric),
               ),
               cache: "no-store",
               redirect: "error",
@@ -655,13 +658,14 @@ export function createAnalyticsService({
           );
           const report = await readJson(response);
           try {
-            return parseRealtime(report, timeline);
+            return parseRealtime(report, timeline, metric);
           } catch (error) {
             // Shape only: never log response rows, credentials, OAuth tokens,
             // property/stream identity, or the Google response body.
             console.warn("GA4 realtime response shape rejected", {
               minutes,
               timeline,
+              requestedMetric: metric,
               dimensions: Array.isArray(report?.dimensionHeaders)
                 ? report.dimensionHeaders.map((header) => header?.name)
                 : undefined,
@@ -680,8 +684,9 @@ export function createAnalyticsService({
       );
       return {
         status: "ready",
-        active30: reports[0],
-        active5: reports[1],
+        ...(metric === "screenPageViews"
+          ? { views30: reports[0], views5: reports[1] }
+          : { active30: reports[0], active5: reports[1] }),
         minutes: reports[2],
         fetchedAt: new Date(now()).toISOString(),
       };

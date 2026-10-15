@@ -5,6 +5,9 @@ const load = createAnalyticsService();
 export async function loadRealtimeAnalytics() {
   return load({ realtime: true });
 }
+export async function loadRealtimeViews() {
+  return load({ realtime: true, metric: "screenPageViews" });
+}
 export async function loadWebsiteAnalytics(
   range: AnalyticsRange,
 ): Promise<AnalyticsResponse> {
