@@ -36,7 +36,7 @@ const report = (value, timeline = false) => ({
 test("realtime is restricted to web stream and inclusive rolling minute windows", () => {
   const request = realtimeRequest("456", 5);
   assert.deepEqual(request.minuteRanges, [
-    { startMinutesAgo: 4, endMinutesAgo: 0 },
+    { name: "recent", startMinutesAgo: 4, endMinutesAgo: 0 },
   ]);
   assert.equal(
     request.dimensionFilter.andGroup.expressions[0].filter.stringFilter.value,
@@ -60,6 +60,40 @@ test("timeline fills only successful empty buckets, orders oldest first and neve
   const invalid = report(1, true);
   invalid.rows[0].dimensionValues[0].value = "30";
   assert.throws(() => parseRealtime(invalid, true), /response/);
+});
+
+test("named minute range column is resolved by header name in either order", () => {
+  for (const reversed of [false, true]) {
+    const value = report(4, true);
+    value.dimensionHeaders.push({ name: "dateRange" });
+    value.rows[0].dimensionValues.push({ value: "recent" });
+    if (reversed) {
+      value.dimensionHeaders.reverse();
+      value.rows[0].dimensionValues.reverse();
+    }
+    assert.equal(parseRealtime(value, true)[29].users, 4);
+  }
+  const total = report(7);
+  total.dimensionHeaders = [{ name: "dateRange" }];
+  total.rows[0].dimensionValues = [{ value: "recent" }];
+  assert.equal(parseRealtime(total), 7);
+  total.rows[0].dimensionValues[0].value = "another-window";
+  assert.throws(() => parseRealtime(total), /response/);
+});
+
+test("recognized empty protobuf reports may omit headers but malformed reports remain errors", () => {
+  const empty = { kind: "analyticsData#runRealtimeReport" };
+  assert.equal(parseRealtime(empty), 0);
+  assert.equal(
+    parseRealtime(empty, true).every((point) => point.users === 0),
+    true,
+  );
+  assert.throws(() => parseRealtime({}), /response/);
+  assert.throws(() => parseRealtime({ ...empty, rowCount: 1 }), /response/);
+  assert.throws(
+    () => parseRealtime({ ...empty, metricHeaders: [{ name: "eventCount" }] }),
+    /response/,
+  );
 });
 test("service reuses OAuth, coalesces refreshes, separates 5/30 minute totals and expires short cache", async () => {
   let time = 100000,
