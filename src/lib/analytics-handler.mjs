@@ -2,6 +2,8 @@ import { analyticsRange } from "./analytics-contracts.mjs";
 import { AnalyticsError } from "./analytics-data.mjs";
 import { AuthorizationError } from "./admin-session.mjs";
 const messages = {
+  counter:
+    "Chưa đọc được bộ đếm APK nội bộ. Kiểm tra backend đã deploy migration và bật WebsiteMetrics:Enabled.",
   config:
     "Cấu hình GA4 không hợp lệ. Kiểm tra Property ID và service account trên máy chủ.",
   credentials:

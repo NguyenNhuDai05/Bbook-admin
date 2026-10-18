@@ -1,6 +1,15 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiMessage, createSubmissionLock } from "./contracts.mjs";
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+  ) {
+    super(message);
+  }
+}
 export async function request<T>(
   path: string,
   method = "GET",
@@ -31,7 +40,12 @@ export async function request<T>(
   }
   if (response.status === 204) return undefined as T;
   const result = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(apiMessage(response.status, result));
+  if (!response.ok)
+    throw new ApiError(
+      apiMessage(response.status, result),
+      response.status,
+      result?.code ?? result?.Code,
+    );
   if (result === null) throw new Error("Dữ liệu Backend không đúng định dạng.");
   return result as T;
 }

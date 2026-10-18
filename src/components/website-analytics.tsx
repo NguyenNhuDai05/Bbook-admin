@@ -1,5 +1,5 @@
 "use client";
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { RealtimeActivity } from "./analytics-realtime";
 import {
   Activity,
@@ -20,6 +20,8 @@ import {
 } from "@/lib/analytics-contracts.mjs";
 import type { AnalyticsKpi, AnalyticsReady } from "@/lib/analytics-types";
 import { websiteAnalyticsQuery } from "@/services/analytics-service";
+import { websiteApkQuery } from "@/services/analytics-service";
+import type { ApkDailyReady } from "@/lib/analytics-types";
 import { PageTitle } from "./ui";
 import s from "./website-analytics.module.css";
 
@@ -123,17 +125,32 @@ function Metric({
   );
 }
 function Chart({
-  daily,
+  daily: gaDaily,
   placeholder,
+  apk,
+  apkPlaceholder,
 }: {
   daily: AnalyticsReady["daily"];
   placeholder: ReactNode;
+  apk?: ApkDailyReady;
+  apkPlaceholder: ReactNode;
 }) {
   const [realtime, setRealtime] = useState<"users" | "views" | null>(null);
   const [metric, setMetric] = useState<"users" | "sessions" | "apkClicks">(
     "users",
   );
   const [selected, setSelected] = useState<number | null>(null);
+  const counts = new Map(apk?.daily.map((row) => [row.date, row.clicks]));
+  const daily = (
+    metric === "apkClicks"
+      ? (apk?.daily.map((row) => ({
+          date: row.date,
+          users: null,
+          sessions: null,
+          apkClicks: row.clicks,
+        })) ?? [])
+      : gaDaily
+  ).map((row) => ({ ...row, apkClicks: counts.get(row.date) ?? null }));
   const gradient = useId().replaceAll(":", "");
   const labels = {
     users: "Người truy cập",
@@ -198,11 +215,16 @@ function Chart({
       ) : (
         <>
           {!daily.length ? (
-            placeholder
+            metric === "apkClicks" ? (
+              apkPlaceholder
+            ) : (
+              placeholder
+            )
           ) : daily.every((day) => day[metric] === null) ? (
             <div className={s.placeholder}>
-              GA4 chưa cung cấp {labels[metric].toLowerCase()}; không hiển thị
-              đường biểu đồ giả.
+              {metric === "apkClicks"
+                ? "Chưa ghi nhận lượt nhấn nội bộ trong khoảng ngày này."
+                : `GA4 chưa cung cấp ${labels[metric].toLowerCase()}; không hiển thị đường biểu đồ giả.`}
             </div>
           ) : (
             <div
@@ -349,10 +371,20 @@ function Chart({
               </table>
             </div>
           </details>
-          <p className={s.note}>
-            Một người có thể truy cập nhiều ngày; không cộng các điểm thành tổng
-            người dùng duy nhất.
-          </p>
+          {metric === "apkClicks" ? (
+            <p className={s.note}>
+              Đếm nội bộ · cập nhật khoảng 45 giây.{" "}
+              {apk?.trackingStartedAt
+                ? `Bắt đầu ghi nhận ${new Date(apk.trackingStartedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}. Ngày bắt đầu có thể chưa đủ cả ngày.`
+                : "Chưa có lượt nhấn được ghi nhận."}{" "}
+              Dấu — là chưa có dữ liệu, không cộng với GA4.
+            </p>
+          ) : (
+            <p className={s.note}>
+              Một người có thể truy cập nhiều ngày; không cộng các điểm thành
+              tổng người dùng duy nhất.
+            </p>
+          )}
         </>
       )}
     </>
@@ -367,6 +399,32 @@ export function WebsiteAnalytics() {
   const [draft, setDraft] = useState(range);
   const [dateError, setDateError] = useState("");
   const resource = useResource(websiteAnalyticsQuery(range.start, range.end));
+  const counter = useResource(websiteApkQuery(range.start, range.end), {
+    retainData: true,
+  });
+  const apk =
+    !counter.error && counter.data?.source === "first_party"
+      ? counter.data
+      : undefined;
+  const { reload: reloadCounter, loading: counterLoading } = counter;
+  useEffect(() => {
+    const refresh = () => {
+      if (!document.hidden && !counterLoading) reloadCounter();
+    };
+    const timer = setInterval(refresh, 45000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [reloadCounter, counterLoading]);
+  const apkPlaceholder = (
+    <div className={s.placeholder} role="status">
+      {counterLoading
+        ? "Đang đọc lượt nhấn APK nội bộ…"
+        : counter.error || "Chưa có lượt nhấn nội bộ được ghi nhận."}
+    </div>
+  );
   const data = resource.data?.status === "ready" ? resource.data : undefined;
   const status = resource.loading
     ? "loading"
@@ -573,10 +631,18 @@ export function WebsiteAnalytics() {
         />
         <Metric
           label="Lượt nhấn tải APK"
-          subtitle=""
+          subtitle={
+            apk?.trackingStartedAt
+              ? `Đếm nội bộ từ ${new Date(apk.trackingStartedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}`
+              : "Theo ngày · đếm nội bộ"
+          }
           icon={<Download size={20} />}
-          metric={data?.kpis.apk}
-          state={status}
+          metric={
+            apk?.total !== null && apk?.total !== undefined
+              ? { value: apk.total, previous: null, change: null }
+              : undefined
+          }
+          state={counterLoading ? "loading" : counter.error ? "error" : "ready"}
         />
         <Metric
           label="Tỷ lệ tương tác"
@@ -609,6 +675,8 @@ export function WebsiteAnalytics() {
           className={s.wide}
         >
           <Chart
+            apk={apk}
+            apkPlaceholder={apkPlaceholder}
             key={range.start + ":" + range.end}
             daily={data?.daily ?? []}
             placeholder={placeholder}

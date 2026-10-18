@@ -26,20 +26,23 @@ const compiled = ts.transpileModule(
     },
   },
 ).outputText;
-function render(resource) {
+function render(resource, counterResource = {}) {
   const compiledModule = { exports: {} };
   const mocks = {
     "./analytics-realtime": { RealtimeActivity: () => null },
     "@/lib/client": {
-      useResource: () => ({
+      useResource: (query) => ({
         reload() {},
         loading: false,
         error: "",
-        ...resource,
+        ...(query.key === "own-apk" ? counterResource : resource),
       }),
     },
     "@/lib/analytics-contracts.mjs": contracts,
-    "@/services/analytics-service": { websiteAnalyticsQuery: () => ({}) },
+    "@/services/analytics-service": {
+      websiteAnalyticsQuery: () => ({ key: "ga4" }),
+      websiteApkQuery: () => ({ key: "own-apk" }),
+    },
     "./website-analytics.module.css": new Proxy(
       {},
       { get: (_, key) => String(key) },
@@ -132,4 +135,27 @@ test("unavailable metadata renders dash and explanation, while API error and dis
   });
   assert.ok(disconnected.includes("Chưa kết nối Google Analytics"));
   assert.ok(!disconnected.includes("Khoảng ngày có hôm nay"));
+});
+
+test("APK KPI uses internal daily counts without adding delayed GA4 counts", () => {
+  const html = render(
+    { data: snapshot() },
+    {
+      data: {
+        status: "ready",
+        source: "first_party",
+        timezone: "Asia/Ho_Chi_Minh",
+        trackingStartedAt: "2026-10-15T01:00:00Z",
+        total: 17,
+        daily: [{ date: "2026-10-15", clicks: 17 }],
+        fetchedAt: "2026-10-15T02:00:00Z",
+      },
+    },
+  );
+  assert.match(html, /Đếm nội bộ từ/);
+  const apkCard = html.slice(
+    html.indexOf("Lượt nhấn tải APK"),
+    html.indexOf("Tỷ lệ tương tác"),
+  );
+  assert.match(apkCard, />17<\/strong>/);
 });
