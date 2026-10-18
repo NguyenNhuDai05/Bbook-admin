@@ -5,6 +5,15 @@ export interface AnalyticsRange {
   previousStart: string;
   previousEnd: string;
 }
+export interface ApkDailyReady {
+  status: "ready";
+  source: "first_party";
+  timezone: "Asia/Ho_Chi_Minh";
+  trackingStartedAt: string | null;
+  total: number | null;
+  daily: { date: string; clicks: number | null }[];
+  fetchedAt: string;
+}
 export interface AnalyticsKpi {
   value: number | null;
   previous: number | null;

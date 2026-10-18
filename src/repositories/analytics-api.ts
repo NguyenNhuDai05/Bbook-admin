@@ -1,4 +1,19 @@
 import type { AnalyticsResponse } from "@/lib/analytics-types";
+import type { ApkDailyReady } from "@/lib/analytics-types";
+export async function readApkDaily(
+  start: string,
+  end: string,
+  signal: AbortSignal,
+): Promise<ApkDailyReady> {
+  const response = await fetch(
+    `/api/analytics/apk-daily?${new URLSearchParams({ start, end })}`,
+    { credentials: "same-origin", cache: "no-store", signal },
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok || data?.source !== "first_party")
+    throw new Error(data?.message || "Không thể đọc bộ đếm APK nội bộ.");
+  return data;
+}
 export async function readWebsiteAnalytics(
   start: string,
   end: string,

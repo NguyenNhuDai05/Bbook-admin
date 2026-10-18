@@ -79,7 +79,7 @@ const groups = [
         label: "Báo cáo nội dung",
         icon: MessageCircleWarning,
       },
-      { key: "styles", label: "Phong cách makeup", icon: Sparkles },
+      { key: "styles", label: "Danh mục Makeup", icon: Sparkles },
       { key: "notifications", label: "Thông báo", icon: Bell },
       { key: "feedback", label: "Feedback người dùng", icon: MessageSquare },
     ],

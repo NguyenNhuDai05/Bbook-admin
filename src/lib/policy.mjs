@@ -1,6 +1,13 @@
 const guid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules = [
+  ["GET", /^makeup-catalog$/],
+  ["GET", /^admin\/makeup-styles\/[1-9]\d*\/usage$/],
+  ["POST", /^admin\/makeup-styles\/[1-9]\d*\/(archive|review)$/],
+  ["GET", /^admin\/makeup-catalog\/terms(?:\/[1-9]\d*(?:\/usage)?)?$/],
+  ["POST", /^admin\/makeup-catalog\/terms(?:\/[1-9]\d*\/archive)?$/],
+  ["PUT", /^admin\/makeup-catalog\/terms\/[1-9]\d*$/],
+  ["PATCH", /^admin\/makeup-catalog\/terms\/[1-9]\d*\/status$/],
   ["GET", /^admin\/management\/(users|financial-summary)$/],
   ["GET", /^admin\/bank-accounts\/history$/],
   ["GET", /^admin\/makeup-styles(?:\/[1-9]\d*)?$/],
