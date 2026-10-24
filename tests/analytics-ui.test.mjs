@@ -159,3 +159,23 @@ test("APK KPI uses internal daily counts without adding delayed GA4 counts", () 
   );
   assert.match(apkCard, />17<\/strong>/);
 });
+test("counter outage is an explicit alert and error card while GA4 stays available", () => {
+  const html = render(
+    { data: snapshot() },
+    {
+      error:
+        "Chưa đọc được bộ đếm APK nội bộ. Kiểm tra backend đã deploy migration và bật WebsiteMetrics:Enabled.",
+    },
+  );
+  assert.match(html, /Không thể tải lượt nhấn APK nội bộ/);
+  assert.match(html, /WebsiteMetrics:Enabled/);
+  assert.match(html, /Thử lại bộ đếm APK/);
+  assert.match(html, /role="alert"/);
+  const card = html.slice(
+    html.indexOf("Lượt nhấn tải APK"),
+    html.indexOf("Tỷ lệ tương tác"),
+  );
+  assert.match(card, /Không tải được dữ liệu/);
+  assert.doesNotMatch(card, />0<\/strong>|Chưa có số liệu/);
+  assert.match(html, /Người truy cập/);
+});

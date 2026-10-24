@@ -22,11 +22,15 @@ Chọn compute plan phù hợp trong giao diện Render. Đặt các biến môi
 ```text
 NODE_ENV=production
 NODE_VERSION=22.22.3
-BACKEND_API_URL=https://beautybook-13zj.onrender.com/api
-APP_ORIGIN=https://<domain-thuc-te-cua-admin>.onrender.com
+BACKEND_API_URL=https://beautybook-v3bi.onrender.com/api
+APP_ORIGIN=https://bbook-admin-4nwp.onrender.com
 ```
 
 `APP_ORIGIN` phải đúng URL HTTPS của Web Admin, không có `/login` hoặc dấu `/` cuối. Khi Render cấp domain thực tế, cập nhật biến này và chọn Save, rebuild, and deploy. Nếu đổi sang custom domain, cập nhật APP_ORIGIN tương ứng. Giá trị sai có thể gây lỗi 403 khi đăng nhập hoặc lưu dữ liệu.
+
+Hai URL trên là backend/admin mới được cung cấp ngày 22/10/2026. Trên Render, sửa trong **service bbook-admin → Environment**, không phải Environment của backend. Chọn **Save, rebuild, and deploy** để áp dụng. `.env.local` trên máy vẫn giữ `APP_ORIGIN=http://localhost:3001` cho local development; thay file local không cập nhật được biến môi trường trên Render.
+
+Kiểm tra không dùng tài khoản: `GET /api/session` phải trả 401. `POST /api/session` với Origin đúng domain admin và JSON `{}` phải trả 400 (thiếu thông tin), còn Origin khác phải trả 403. Nếu Origin đúng vẫn trả 403 với `Yêu cầu không hợp lệ.`, cần kiểm tra APP_ORIGIN đã được deploy đúng. Không tắt kiểm tra Origin để sửa lỗi này.
 
 `BACKEND_API_URL` là địa chỉ BE hiện dùng của ứng dụng; nếu đổi BE, cập nhật biến này. `.env.local` chỉ dùng trên máy và không được commit. Render chạy `npm start` trên host `0.0.0.0`, cổng lấy từ biến `PORT` do Render cấp.
 

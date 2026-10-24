@@ -118,7 +118,9 @@ function Metric({
             ? "Đang lấy dữ liệu GA4"
             : state === "not_connected"
               ? "Chưa kết nối GA4"
-              : "Chưa có số liệu"}
+              : state === "error"
+                ? "Không tải được dữ liệu"
+                : "Chưa có số liệu"}
         </span>
       )}
     </section>
@@ -492,8 +494,11 @@ export function WebsiteAnalytics() {
         action={
           <button
             className="button secondary"
-            onClick={resource.reload}
-            disabled={resource.loading}
+            onClick={() => {
+              resource.reload();
+              reloadCounter();
+            }}
+            disabled={resource.loading || counterLoading}
           >
             <RefreshCw size={16} />
             {resource.loading ? "Đang tải" : "Tải lại"}
@@ -576,6 +581,19 @@ export function WebsiteAnalytics() {
           <p>{resource.error}</p>
           <button className="button secondary" onClick={resource.reload}>
             Thử lại
+          </button>
+        </div>
+      )}
+      {counter.error && (
+        <div className={`${s.notice} ${s.error}`} role="alert">
+          <strong>Không thể tải lượt nhấn APK nội bộ</strong>
+          <p>{counter.error}</p>
+          <button
+            className="button secondary"
+            onClick={reloadCounter}
+            disabled={counterLoading}
+          >
+            Thử lại bộ đếm APK
           </button>
         </div>
       )}
