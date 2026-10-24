@@ -2551,6 +2551,13 @@ dd {
   line-height: 1.7;
 }
 /* Viewport shell: sidebar navigation and page content scroll independently. */
+.reporter-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 24rem;
+  overflow-wrap: anywhere;
+}
 .moderation-toolbar label {
   display: flex;
   align-items: center;

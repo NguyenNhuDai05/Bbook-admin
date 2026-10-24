@@ -12,6 +12,18 @@ import {
 import { date, shortId } from "@/lib/format";
 import { DocumentView, Modal, PageTitle, Pagination, State } from "./ui";
 import type { PageProps } from "./admin-app";
+import type { ReportRow } from "@/services/moderation-service";
+
+function ReporterIdentity({ report }: { report: ReportRow }) {
+  return (
+    <div className="reporter-identity">
+      {report.reporterName && <span>{report.reporterName}</span>}
+      <span className="muted">
+        {report.reporterEmail || "Chưa có thông tin email"}
+      </span>
+    </div>
+  );
+}
 
 export function Moderation({ base, id }: PageProps & { id?: string }) {
   return id ? (
@@ -77,6 +89,7 @@ function ReportList({ base }: PageProps) {
               <thead>
                 <tr>
                   <th>Báo cáo</th>
+                  <th>Người báo cáo</th>
                   <th>Loại nội dung</th>
                   <th>Lý do</th>
                   <th>Trạng thái</th>
@@ -88,6 +101,9 @@ function ReportList({ base }: PageProps) {
                 {query.data.items.map((item) => (
                   <tr key={item.id}>
                     <td>BC-{shortId(item.id)}</td>
+                    <td>
+                      <ReporterIdentity report={item} />
+                    </td>
                     <td>{reportTargets[item.targetType] ?? item.targetType}</td>
                     <td>{reportReasons[item.reason] ?? item.reason}</td>
                     <td>{reportStatuses[item.status] ?? item.status}</td>
@@ -182,6 +198,10 @@ function ReportDetailPage({ base, id }: PageProps & { id: string }) {
         <section className="panel complaint-panel">
           <h2>Thông tin báo cáo</h2>
           <dl className="complaint-facts">
+            <dt>Người báo cáo</dt>
+            <dd>
+              <ReporterIdentity report={report} />
+            </dd>
             <dt>Trạng thái</dt>
             <dd>{reportStatuses[report.status]}</dd>
             <dt>Lý do</dt>

@@ -7,6 +7,8 @@ export type ReportRow = {
   reason: string;
   status: string;
   createdAt: string;
+  reporterName?: string | null;
+  reporterEmail?: string | null;
 };
 export type ReportDetail = ReportRow & {
   targetOwnerId?: string;
