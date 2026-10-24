@@ -23,14 +23,16 @@ Chọn compute plan phù hợp trong giao diện Render. Đặt các biến môi
 NODE_ENV=production
 NODE_VERSION=22.22.3
 BACKEND_API_URL=https://beautybook-v3bi.onrender.com/api
-APP_ORIGIN=https://bbook-admin-4nwp.onrender.com
+APP_ORIGIN=https://admin.bbookmakeup.com
 ```
 
-`APP_ORIGIN` phải đúng URL HTTPS của Web Admin, không có `/login` hoặc dấu `/` cuối. Khi Render cấp domain thực tế, cập nhật biến này và chọn Save, rebuild, and deploy. Nếu đổi sang custom domain, cập nhật APP_ORIGIN tương ứng. Giá trị sai có thể gây lỗi 403 khi đăng nhập hoặc lưu dữ liệu.
+`APP_ORIGIN` phải đúng URL HTTPS mà người dùng mở Web Admin, không có `/login` hoặc dấu `/` cuối. Domain chính thức hiện tại là `https://admin.bbookmakeup.com`; giữ domain riêng này khi service Render vẫn có URL mặc định `https://bbook-admin-4nwp.onrender.com`. Chỉ cập nhật biến và redeploy khi thực sự đổi domain chính thức. Giá trị sai có thể gây lỗi 403 khi đăng nhập hoặc lưu dữ liệu.
 
-Hai URL trên là backend/admin mới được cung cấp ngày 22/10/2026. Trên Render, sửa trong **service bbook-admin → Environment**, không phải Environment của backend. Chọn **Save, rebuild, and deploy** để áp dụng. `.env.local` trên máy vẫn giữ `APP_ORIGIN=http://localhost:3001` cho local development; thay file local không cập nhật được biến môi trường trên Render.
+Backend dùng URL Render trong `BACKEND_API_URL`, còn admin dùng domain riêng trong `APP_ORIGIN`; hai cấu hình này không cần dùng cùng dạng hostname. Trên Render, cấu hình trong **service bbook-admin → Environment**, không phải Environment của backend. `.env.local` trên máy vẫn giữ `APP_ORIGIN=http://localhost:3001` cho local development; thay file local không cập nhật được biến môi trường trên Render.
 
 Kiểm tra không dùng tài khoản: `GET /api/session` phải trả 401. `POST /api/session` với Origin đúng domain admin và JSON `{}` phải trả 400 (thiếu thông tin), còn Origin khác phải trả 403. Nếu Origin đúng vẫn trả 403 với `Yêu cầu không hợp lệ.`, cần kiểm tra APP_ORIGIN đã được deploy đúng. Không tắt kiểm tra Origin để sửa lỗi này.
+
+Kiểm tra production bằng `APP_ORIGIN=https://admin.bbookmakeup.com` và `node scripts/smoke.mjs`. Yêu cầu gửi từ domain mặc định Render có thể bị 403 khi APP_ORIGIN ghim domain riêng; đây là hành vi bảo vệ đúng, không phải lý do đổi lại domain mặc định. Ngày 25/10/2026 đã kiểm tra domain riêng và đạt 17/17 ca HTTP ẩn danh.
 
 `BACKEND_API_URL` là địa chỉ BE hiện dùng của ứng dụng; nếu đổi BE, cập nhật biến này. `.env.local` chỉ dùng trên máy và không được commit. Render chạy `npm start` trên host `0.0.0.0`, cổng lấy từ biến `PORT` do Render cấp.
 
