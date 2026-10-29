@@ -44,9 +44,7 @@ export function TransactionsPage() {
       valid,
     ),
   );
-  const appRevenue = all
-    ? revenue.data?.lifetime.revenue
-    : revenue.data?.current.revenue;
+  const appRevenue = revenue.data?.lifetime.revenue;
   const ready =
     valid && !resource.loading && !resource.error && !!resource.data;
   const searched = filterTransactions(resource.data || [], search);
@@ -181,10 +179,10 @@ export function TransactionsPage() {
       <div className={s.summary} aria-label="Thống kê giao dịch và doanh thu">
         <section
           className={s.revenue}
-          aria-label="Doanh thu app"
-          title="Phí nền tảng từ booking đã hoàn thành, tính theo ngày hoàn thành trong khoảng ngày chọn. Không lọc theo từ khóa hoặc trạng thái giao dịch."
+          aria-label="Tổng doanh thu app"
+          title="Tổng doanh thu từ đầu đến nay, cùng số liệu Tổng doanh thu trên Dashboard. Doanh thu trong kỳ tính theo ngày hoàn thành booking. Không lọc theo từ khóa hoặc trạng thái giao dịch."
         >
-          <span>Doanh thu app</span>
+          <span>Tổng doanh thu app</span>
           <strong>
             {valid &&
             !revenue.loading &&
@@ -198,9 +196,13 @@ export function TransactionsPage() {
               ? "Không tải được doanh thu"
               : revenue.loading
                 ? "Đang tải…"
-                : all
-                  ? "Từ đầu đến nay"
-                  : "Theo ngày hoàn thành"}
+                : !valid
+                  ? "Chọn khoảng ngày hợp lệ"
+                  : all
+                    ? "Từ đầu đến nay"
+                    : revenue.data
+                      ? `Trong kỳ: ${money(revenue.data.current.revenue)}`
+                      : "—"}
           </small>
           {revenue.error && (
             <button className="text-button" onClick={revenue.reload}>

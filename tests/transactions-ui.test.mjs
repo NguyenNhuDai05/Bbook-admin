@@ -207,17 +207,20 @@ test("details preserve list filters in the back link and reject malformed IDs", 
   );
 });
 
-test("app revenue uses dashboard platform fees for the selected completion dates, never payment amounts", () => {
+test("transaction revenue headline matches dashboard lifetime revenue and separates the selected period", () => {
   const period = render(
     "from=2026-10-23&to=2026-10-29&q=Customer&status=Refunded",
     { data: rows },
   );
-  assert.match(period.html, /4500 VND/);
-  assert.doesNotMatch(period.html, /9000 VND|2300 VND/);
+  assert.match(period.html, /Tổng doanh thu app/);
+  assert.match(period.html, /<strong>9000 VND<\/strong>/);
+  assert.match(period.html, /Trong kỳ: 4500 VND/);
+  assert.doesNotMatch(period.html, /2300 VND/);
   assert.deepEqual(period.revenueQueries, [
     { from: "2026-10-23", to: "2026-10-29", enabled: true },
   ]);
   assert.match(render("scope=all", { data: rows }).html, /9000 VND/);
+  assert.doesNotMatch(render("scope=all", { data: rows }).html, /Trong kỳ:/);
   assert.match(
     render("scope=all&status=Paid&q=not-found", { data: rows }).html,
     /9000 VND/,
@@ -232,7 +235,10 @@ test("unavailable revenue stays unavailable while the transaction list remains r
   const { html, tree } = render("scope=all", { data: rows }, undefined, {
     revenue: { error: "Revenue unavailable" },
   });
-  const card = find(tree, (el) => el.props["aria-label"] === "Doanh thu app");
+  const card = find(
+    tree,
+    (el) => el.props["aria-label"] === "Tổng doanh thu app",
+  );
   assert.doesNotMatch(renderToStaticMarkup(card), /VND/);
   assert.match(html, /Thử lại/);
   assert.match(html, /Customer 0/);

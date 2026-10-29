@@ -315,9 +315,6 @@ export function OperationsDashboard() {
                 Tổng doanh thu
               </div>
               <strong>{money(data.lifetime.revenue)}</strong>
-              <span className={s.delta}>
-                Phí nền tảng trên booking hoàn thành
-              </span>
             </section>
             <section className={s.kpi}>
               <div className={s.kpiLabel}>
