@@ -44,6 +44,14 @@ Tests cover actual enum mappings, eligible financial action presentation, duplic
 
 The original admin implementation left Backend and Customer/MUA files unchanged (see its historical SHA-256 baseline in audit/unchanged-check.json). The dashboard extension adds an Admin-only controller and date-range utility/tests to Backend. The current dashboard/feedback extension also adds the feedback migration and API, and a feedback submission screen to Customer/MUA mobile sources; existing API contracts remain compatible.
 
+## Giao dịch
+
+Tab **Giao dịch** tại `/transactions` hiển thị số lượng theo trạng thái, tổng tiền thu ban đầu, tìm kiếm mã giao dịch/booking/đơn PayOS/tên khách, khoảng ngày thu tiền theo giờ Việt Nam, phân trang và liên kết chi tiết `/transactions/[id]`. Các thẻ đếm theo khoảng ngày và từ khóa; trạng thái được chọn lọc bảng và tổng tiền. Bộ lọc nằm trên URL, được giữ khi mở chi tiết và quay lại. Các chỉ số giao dịch ở Tổng quan dẫn đến tab này.
+
+Trang dùng API hiện có `admin/dashboard/transactions`: **chỉ các khoản PayOS đã thu tiền**, bao gồm khoản đã hoàn hoặc khấu trừ cọc, không bao gồm thanh toán chờ/hủy/hết hạn hay chi trả MUA. Không suy diễn số tiền hoàn một phần hoặc số tiền thực thu từ trạng thái. Chi tiết hiển thị từng yêu cầu hoàn và liên kết đến trang xử lý hoàn tiền.
+
+Mặc định tải 30 ngày gần nhất. Để đếm/tìm kiếm đầy đủ với API hiện có, trang tải từng lô 50 bản ghi, tối đa 4 yêu cầu đồng thời và 5.000 giao dịch; báo cáo lớn hơn yêu cầu thu hẹp khoảng ngày. Tải lỗi, thay đổi tổng hoặc trùng mã trong lúc tải sẽ hiển thị lỗi thay vì tổng một phần. Khi quy mô tăng, cần API backend lọc và tổng hợp server-side; việc bổ sung trạng thái chưa thu tiền cũng cần mở rộng backend. Không cần migration hoặc cấu hình mới cho phiên bản admin này.
+
 ## Website Analytics
 
 **Lượt nhấn APK theo ngày cập nhật nhanh:** KPI APK và tab APK dùng bộ đếm nội bộ từ backend `/api/WebsiteMetrics/apk-daily`, qua proxy Admin `/api/analytics/apk-daily`. Tự làm mới 45 giây khi trang hiển thị, cache server 10 giây, không tải lại toàn bộ báo cáo GA4. Cần migration backend `20261015000000_AddWebsiteApkCounters`, `WebsiteMetrics__Enabled=true`, rồi bật `APK_COUNTER_API_URL` trên website. Không thêm secret mới vào Admin. Ngày trước lần ghi nhận đầu tiên là —; ngày bắt đầu có thể thiếu dữ liệu đầu ngày. Lỗi backend được báo rõ, không giả số 0 và không cộng với GA4. Deploy backend → admin → website; không cần build APK mới.

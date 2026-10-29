@@ -1,4 +1,5 @@
 import { adminApi as api } from "@/repositories/admin-api";
+import { collectTransactions } from "@/lib/transactions.mjs";
 import { invalidateResources, type ResourceQuery } from "@/lib/client";
 import type {
   BankApproval,
@@ -31,6 +32,15 @@ async function mutateStyle<T>(action: () => Promise<T>, prefixes: string[]) {
   return result;
 }
 export const adminService = {
+  transactions: (from: string, to: string, enabled = true) =>
+    query(
+      `admin:dashboard:transactions:complete:${from}:${to}`,
+      (signal) =>
+        collectTransactions((page) =>
+          api.dashboardTransactions(from, to, page, signal, 50),
+        ),
+      enabled,
+    ),
   dashboardReviews: (from: string, to: string, rating: number, page: number) =>
     query(`admin:dashboard:reviews:${from}:${to}:${rating}:${page}`, (signal) =>
       api.dashboardReviews(from, to, rating, page, signal),

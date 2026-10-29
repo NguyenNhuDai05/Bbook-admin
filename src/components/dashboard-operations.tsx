@@ -33,7 +33,7 @@ import { Pagination } from "./ui";
 import s from "./dashboard.module.css";
 import { RevenueChart, NewUsersChart } from "./dashboard-charts";
 import { ServiceReviews } from "./dashboard-reviews";
-import { TransactionHistory } from "./dashboard-transactions";
+import { useRouter } from "next/navigation";
 
 const num = (value: number) => value.toLocaleString("vi-VN");
 const day = (value: string) => value.split("-").reverse().join("/");
@@ -203,9 +203,7 @@ export function OperationsDashboard() {
     retainData: true,
   });
   const data = resource.data;
-  const [transactionScope, setTransactionScope] = useState<
-    "all" | "period" | null
-  >(null);
+  const router = useRouter();
   const days = (Date.parse(range.to) - Date.parse(range.from)) / 86400000 + 1;
   const daily = data
     ? [...data.daily].sort((a, b) => b.date.localeCompare(a.date))
@@ -339,7 +337,7 @@ export function OperationsDashboard() {
             <button
               type="button"
               className={`${s.kpi} ${s.clickableKpi}`}
-              onClick={() => setTransactionScope("all")}
+              onClick={() => router.push("/transactions?scope=all")}
             >
               <div className={s.kpiLabel}>
                 <span className={s.icon}>
@@ -527,7 +525,11 @@ export function OperationsDashboard() {
               <span className={s.delta}>
                 <button
                   className="text-button"
-                  onClick={() => setTransactionScope("period")}
+                  onClick={() =>
+                    router.push(
+                      `/transactions?from=${range.from}&to=${range.to}`,
+                    )
+                  }
                 >
                   Xem lịch sử trong kỳ <ChevronRight size={14} />
                 </button>
@@ -612,15 +614,6 @@ export function OperationsDashboard() {
             ngày hoàn thành; chưa trừ điều chỉnh kế toán từ hoàn tiền.
           </p>
         </>
-      )}
-      {transactionScope && (
-        <TransactionHistory
-          key={`${transactionScope}:${range.from}:${range.to}`}
-          from={range.from}
-          to={range.to}
-          initialScope={transactionScope}
-          onClose={() => setTransactionScope(null)}
-        />
       )}
     </div>
   );

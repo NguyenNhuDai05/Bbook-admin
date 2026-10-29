@@ -1,0 +1,109 @@
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.summary button {
+  text-align: left;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+}
+.summary button[aria-pressed="true"] {
+  border-color: #cf2f70;
+  background: #fff5f8;
+}
+.summary strong {
+  display: block;
+  font-size: 24px;
+  margin-top: 7px;
+}
+.summary span {
+  font-size: 12px;
+}
+.scope {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.filters label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+.filters input,
+.filters select {
+  min-height: 36px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: inherit;
+}
+.search {
+  flex: 1;
+  min-width: 220px;
+}
+.table small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.table td {
+  overflow-wrap: anywhere;
+}
+.totals {
+  padding: 12px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.detail {
+  display: grid;
+  gap: 16px;
+}
+.detail dl {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 13px;
+}
+.detail dt {
+  color: var(--muted);
+}
+.detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.detail small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.amount {
+  font-size: 28px;
+}
+@media (max-width: 600px) {
+  .detail dl {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .detail dd {
+    margin-bottom: 8px;
+  }
+  .filters label {
+    flex: 1;
+  }
+}

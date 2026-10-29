@@ -7,6 +7,7 @@ const listRoutes = new Set([
   "complaints",
   "verification",
   "bank-accounts",
+  "transactions",
   "payouts",
   "refunds",
   "moderation",

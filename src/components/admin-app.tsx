@@ -43,6 +43,7 @@ import { BankAccounts, MoneyList, MoneyDetail } from "./finance-pages";
 import { Notifications, Directory, PlannedPage, Bookings } from "./other-pages";
 import { Styles } from "./styles-page";
 import { WebsiteAnalytics } from "./website-analytics";
+import { TransactionsPage, TransactionPage } from "./transactions-page";
 import { AdminContentLayout, isAdminListRoute } from "./admin-content-layout";
 import referenceCss from "./admin-reference.module.css";
 const groups = [
@@ -67,6 +68,7 @@ const groups = [
     items: [
       { key: "verification", label: "Xác minh MUA", icon: ShieldCheck },
       { key: "bank-accounts", label: "Tài khoản nhận tiền", icon: Landmark },
+      { key: "transactions", label: "Giao dịch", icon: WalletCards },
       { key: "payouts", label: "Chi trả MUA", icon: WalletCards },
       { key: "refunds", label: "Hoàn tiền", icon: RotateCcw },
     ],
@@ -151,6 +153,8 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
   else if (key === "verification") page = <Applications {...props} />;
   else if (key === "muas") page = <Applications {...props} management />;
   else if (key === "bank-accounts") page = <BankAccounts />;
+  else if (key === "transactions")
+    page = id ? <TransactionPage id={id} /> : <TransactionsPage />;
   else if (key === "payouts" || key === "refunds")
     page = id ? (
       <MoneyDetail {...props} id={id} refund={key === "refunds"} />

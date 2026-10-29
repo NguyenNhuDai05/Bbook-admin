@@ -54,9 +54,10 @@ export const adminApi = {
     to: string,
     page: number,
     signal: AbortSignal,
+    pageSize = 20,
   ) =>
     paged<DashboardTransaction>(
-      `admin/dashboard/transactions?${params({ page, pageSize: 20, ...(from && to ? { from, to } : {}) })}`,
+      `admin/dashboard/transactions?${params({ page, pageSize, ...(from && to ? { from, to } : {}) })}`,
       [
         "paymentId",
         "bookingId",
