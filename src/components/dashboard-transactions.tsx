@@ -5,14 +5,9 @@ import { adminService } from "@/services/admin-service";
 import { money, shortId, statusLabels } from "@/lib/format";
 import { Modal, Pagination, State } from "./ui";
 import s from "./dashboard.module.css";
+import Link from "next/link";
+import { paymentLabels } from "@/lib/transactions.mjs";
 
-const paymentLabels: Record<string, string> = {
-  Paid: "Đã thanh toán",
-  Refunded: "Đã hoàn tiền",
-  PartiallyRefunded: "Hoàn tiền một phần",
-  RefundPending: "Đang chờ hoàn tiền",
-  Forfeited: "Đã khấu trừ cọc",
-};
 const time = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat("vi-VN", {
@@ -21,17 +16,19 @@ const time = (value: string | null) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "—";
-function TransactionDetail({
+export function TransactionDetail({
   id,
   onClose,
+  embedded = false,
 }: {
   id: string;
   onClose: () => void;
+  embedded?: boolean;
 }) {
   const resource = useResource(adminService.dashboardTransaction(id));
   const item = resource.data;
-  return (
-    <Modal title="Chi tiết giao dịch thanh toán" onClose={onClose} wide>
+  const content = (
+    <>
       {resource.loading || resource.error || !item ? (
         <State
           loading={resource.loading}
@@ -62,7 +59,9 @@ function TransactionDetail({
               <small>ID: {item.booking.muaId}</small>
             </dd>
             <dt>Booking</dt>
-            <dd>{item.bookingId}</dd>
+            <dd>
+              <Link href={`/bookings/${item.bookingId}`}>{item.bookingId}</Link>
+            </dd>
             <dt>Lịch hẹn</dt>
             <dd>
               {new Intl.DateTimeFormat("vi-VN", {
@@ -106,6 +105,9 @@ function TransactionDetail({
                     #{r.refundId} · Tạo {time(r.createdAt)} · Hoàn tất{" "}
                     {time(r.completedAt)}
                   </small>
+                  <Link href={`/refunds/${r.refundId}`}>
+                    Xem yêu cầu hoàn tiền
+                  </Link>
                 </p>
               ))
             ) : (
@@ -114,6 +116,15 @@ function TransactionDetail({
           </div>
         </div>
       )}
+    </>
+  );
+  return embedded ? (
+    <section className="panel" style={{ padding: 24 }}>
+      {content}
+    </section>
+  ) : (
+    <Modal title="Chi tiết giao dịch thanh toán" onClose={onClose} wide>
+      {content}
     </Modal>
   );
 }
