@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { Maximize2, RefreshCw } from "lucide-react";
 import { adminService } from "@/services/admin-service";
 import { useResource } from "@/lib/client";
 import { money, shortId } from "@/lib/format";
 import { filterTransactions, paymentLabels } from "@/lib/transactions.mjs";
 import { presetRange, validRange } from "@/lib/dashboard-presentation.mjs";
-import { PageTitle, Pagination, State } from "./ui";
+import { Modal, PageTitle, Pagination, State } from "./ui";
 import { TransactionDetail } from "./dashboard-transactions";
 import s from "./transactions-page.module.css";
 
@@ -20,6 +21,7 @@ const time = (value: string) =>
 const label = (status: string) => paymentLabels[status] || status;
 
 export function TransactionsPage() {
+  const [expanded, setExpanded] = useState(false);
   const router = useRouter();
   const params = useSearchParams();
   const defaultRange = presetRange("month");
@@ -35,6 +37,16 @@ export function TransactionsPage() {
   const status = params.get("status") || "";
   const valid = all || validRange(from, to);
   const resource = useResource(adminService.transactions(from, to, valid));
+  const revenue = useResource(
+    adminService.dashboard(
+      all ? defaultRange.from : from,
+      all ? defaultRange.to : to,
+      valid,
+    ),
+  );
+  const appRevenue = all
+    ? revenue.data?.lifetime.revenue
+    : revenue.data?.current.revenue;
   const ready =
     valid && !resource.loading && !resource.error && !!resource.data;
   const searched = filterTransactions(resource.data || [], search);
@@ -72,31 +84,130 @@ export function TransactionsPage() {
     detailParams.set("to", to);
   }
   detailParams.set("page", String(page));
+  const list = (
+    <>
+      {!valid ? (
+        <State error="Chọn đủ ngày bắt đầu và kết thúc hợp lệ, tối đa 366 ngày." />
+      ) : resource.loading || resource.error ? (
+        <State
+          loading={resource.loading}
+          error={resource.error}
+          retry={resource.reload}
+        />
+      ) : (
+        <>
+          {visible.length ? (
+            <div className={`table-wrap ${s.table}`}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Giao dịch / Booking</th>
+                    <th>Khách hàng</th>
+                    <th>Mã đơn PayOS</th>
+                    <th>Số tiền</th>
+                    <th>Thu tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Chi tiết</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((x) => (
+                    <tr key={x.paymentId}>
+                      <td>
+                        <span title={x.paymentId}>#{shortId(x.paymentId)}</span>
+                        <small>
+                          <Link href={`/bookings/${x.bookingId}`}>
+                            Booking #{shortId(x.bookingId)}
+                          </Link>
+                        </small>
+                      </td>
+                      <td>{x.customerName || "Khách hàng"}</td>
+                      <td>{x.providerOrderCode}</td>
+                      <td>{money(x.amount)}</td>
+                      <td>{time(x.paidAt)}</td>
+                      <td>
+                        <span
+                          className={`badge ${x.status === "Paid" ? "success" : "info"}`}
+                        >
+                          {label(x.status)}
+                        </span>
+                      </td>
+                      <td>
+                        <Link
+                          className="text-button"
+                          aria-label={`Xem giao dịch ${x.paymentId}`}
+                          href={`/transactions/${x.paymentId}?${detailParams}`}
+                        >
+                          Xem chi tiết
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <State empty="Không có giao dịch khớp bộ lọc" />
+          )}
+          <Pagination
+            page={page}
+            size={20}
+            count={visible.length}
+            total={rows.length}
+            onPage={(value) => update({ page: String(value) })}
+          />
+        </>
+      )}
+    </>
+  );
   return (
     <>
       <PageTitle
         title="Giao dịch"
-        description="Tra cứu thanh toán và lịch sử hoàn tiền theo từng giao dịch"
         action={
           <button
             className="button secondary"
-            disabled={!valid || resource.loading}
-            onClick={resource.reload}
+            disabled={!valid || resource.loading || revenue.loading}
+            onClick={() => {
+              resource.reload();
+              revenue.reload();
+            }}
           >
             <RefreshCw size={15} />
             Làm mới
           </button>
         }
       />
-      <p className={s.scope}>
-        Dữ liệu PayOS đã thu tiền, bao gồm các khoản đã hoàn hoặc khấu trừ cọc.
-        Chưa bao gồm thanh toán đang chờ, hủy, hết hạn và chi trả MUA. Khoảng
-        ngày tính theo thời điểm thu tiền, giờ Việt Nam.
-      </p>
-      <div
-        className={s.summary}
-        aria-label="Số lượng giao dịch theo trạng thái"
-      >
+      <div className={s.summary} aria-label="Thống kê giao dịch và doanh thu">
+        <section
+          className={s.revenue}
+          aria-label="Doanh thu app"
+          title="Phí nền tảng từ booking đã hoàn thành, tính theo ngày hoàn thành trong khoảng ngày chọn. Không lọc theo từ khóa hoặc trạng thái giao dịch."
+        >
+          <span>Doanh thu app</span>
+          <strong>
+            {valid &&
+            !revenue.loading &&
+            !revenue.error &&
+            appRevenue !== undefined
+              ? money(appRevenue)
+              : "—"}
+          </strong>
+          <small>
+            {revenue.error
+              ? "Không tải được doanh thu"
+              : revenue.loading
+                ? "Đang tải…"
+                : all
+                  ? "Từ đầu đến nay"
+                  : "Theo ngày hoàn thành"}
+          </small>
+          {revenue.error && (
+            <button className="text-button" onClick={revenue.reload}>
+              Thử lại
+            </button>
+          )}
+        </section>
         {["", ...statuses].map((value) => (
           <button
             key={value}
@@ -196,91 +307,25 @@ export function TransactionsPage() {
           <span className={s.scope}>
             {all ? "Từ đầu đến nay" : `${from} – ${to}`}
           </span>
+          <button
+            className={`button secondary ${s.expandButton}`}
+            onClick={() => setExpanded(true)}
+          >
+            <Maximize2 size={15} /> Mở rộng bảng
+          </button>
         </div>
-        {!valid ? (
-          <State error="Chọn đủ ngày bắt đầu và kết thúc hợp lệ, tối đa 366 ngày." />
-        ) : resource.loading || resource.error ? (
-          <State
-            loading={resource.loading}
-            error={resource.error}
-            retry={resource.reload}
-          />
-        ) : (
-          <>
-            <div className={s.totals} role="status">
-              {rows.length.toLocaleString("vi-VN")} giao dịch khớp bộ lọc · Tổng
-              tiền thu ban đầu:{" "}
-              <strong>
-                {money(rows.reduce((sum, x) => sum + x.amount, 0))}
-              </strong>{" "}
-              · Chưa trừ hoàn tiền. Các thẻ đếm theo khoảng ngày và từ khóa;
-              chọn trạng thái để lọc bảng.
-            </div>
-            {visible.length ? (
-              <div className={`table-wrap ${s.table}`}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Giao dịch / Booking</th>
-                      <th>Khách hàng</th>
-                      <th>Mã đơn PayOS</th>
-                      <th>Số tiền</th>
-                      <th>Thu tiền</th>
-                      <th>Trạng thái</th>
-                      <th>Chi tiết</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((x) => (
-                      <tr key={x.paymentId}>
-                        <td>
-                          <span title={x.paymentId}>
-                            #{shortId(x.paymentId)}
-                          </span>
-                          <small>
-                            <Link href={`/bookings/${x.bookingId}`}>
-                              Booking #{shortId(x.bookingId)}
-                            </Link>
-                          </small>
-                        </td>
-                        <td>{x.customerName || "Khách hàng"}</td>
-                        <td>{x.providerOrderCode}</td>
-                        <td>{money(x.amount)}</td>
-                        <td>{time(x.paidAt)}</td>
-                        <td>
-                          <span
-                            className={`badge ${x.status === "Paid" ? "success" : "info"}`}
-                          >
-                            {label(x.status)}
-                          </span>
-                        </td>
-                        <td>
-                          <Link
-                            className="text-button"
-                            aria-label={`Xem giao dịch ${x.paymentId}`}
-                            href={`/transactions/${x.paymentId}?${detailParams}`}
-                          >
-                            Xem chi tiết
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <State empty="Không có giao dịch khớp bộ lọc" />
-            )}
-            <Pagination
-              page={page}
-              size={20}
-              count={visible.length}
-              total={rows.length}
-              onPage={(value) => update({ page: String(value) })}
-            />
-          </>
-        )}
+        {list}
       </section>
+      {expanded && (
+        <Modal
+          title="Giao dịch"
+          onClose={() => setExpanded(false)}
+          className={s.expanded}
+          wide
+        >
+          {list}
+        </Modal>
+      )}
     </>
   );
 }

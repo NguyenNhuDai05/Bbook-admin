@@ -46,7 +46,9 @@ The original admin implementation left Backend and Customer/MUA files unchanged 
 
 ## Giao dịch
 
-Tab **Giao dịch** tại `/transactions` hiển thị số lượng theo trạng thái, tổng tiền thu ban đầu, tìm kiếm mã giao dịch/booking/đơn PayOS/tên khách, khoảng ngày thu tiền theo giờ Việt Nam, phân trang và liên kết chi tiết `/transactions/[id]`. Các thẻ đếm theo khoảng ngày và từ khóa; trạng thái được chọn lọc bảng và tổng tiền. Bộ lọc nằm trên URL, được giữ khi mở chi tiết và quay lại. Các chỉ số giao dịch ở Tổng quan dẫn đến tab này.
+Tab **Giao dịch** tại `/transactions` hiển thị doanh thu app, số lượng theo trạng thái, tìm kiếm mã giao dịch/booking/đơn PayOS/tên khách, khoảng ngày thu tiền theo giờ Việt Nam, phân trang và liên kết chi tiết `/transactions/[id]`. Các thẻ đếm theo khoảng ngày và từ khóa; trạng thái được chọn lọc bảng. Bảng giãn theo nội dung, cuộn trang và có nút **Mở rộng bảng** để xem gần toàn màn hình. Bộ lọc nằm trên URL, được giữ khi mở chi tiết và quay lại. Các chỉ số giao dịch ở Tổng quan dẫn đến tab này.
+
+Doanh thu app lấy từ API Dashboard, giống Tổng quan: phí nền tảng của booking đã hoàn thành, tính theo ngày hoàn thành trong khoảng ngày chọn; chọn Toàn bộ để xem doanh thu từ đầu đến nay. Từ khóa và trạng thái giao dịch không lọc doanh thu. Lỗi tải doanh thu không thay bằng 0 và không chặn danh sách giao dịch.
 
 Trang dùng API hiện có `admin/dashboard/transactions`: **chỉ các khoản PayOS đã thu tiền**, bao gồm khoản đã hoàn hoặc khấu trừ cọc, không bao gồm thanh toán chờ/hủy/hết hạn hay chi trả MUA. Không suy diễn số tiền hoàn một phần hoặc số tiền thực thu từ trạng thái. Chi tiết hiển thị từng yêu cầu hoàn và liên kết đến trang xử lý hoàn tiền.
 

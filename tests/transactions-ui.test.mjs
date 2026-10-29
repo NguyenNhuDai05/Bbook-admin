@@ -23,11 +23,20 @@ const compiled = ts.transpileModule(
     },
   },
 ).outputText;
-function render(query = "scope=all", resource = {}, id) {
+function render(query = "scope=all", resource = {}, id, options = {}) {
   const compiledModule = { exports: {} };
   const navigations = [];
+  const states = [];
+  const revenueQueries = [];
   const params = new URLSearchParams(query);
   const mocks = {
+    react: {
+      ...React,
+      useState: () => [
+        options.expanded || false,
+        (value) => states.push(value),
+      ],
+    },
     "next/link": {
       default: ({ children, ...props }) =>
         React.createElement("a", props, children),
@@ -37,14 +46,26 @@ function render(query = "scope=all", resource = {}, id) {
       useRouter: () => ({ replace: (url) => navigations.push(url) }),
     },
     "@/lib/client": {
-      useResource: () => ({
+      useResource: (query) => ({
         loading: false,
         error: "",
         reload() {},
-        ...resource,
+        ...(query.key === "revenue"
+          ? options.revenue || {
+              data: { current: { revenue: 4500 }, lifetime: { revenue: 9000 } },
+            }
+          : resource),
       }),
     },
-    "@/services/admin-service": { adminService: { transactions: () => ({}) } },
+    "@/services/admin-service": {
+      adminService: {
+        transactions: () => ({ key: "transactions" }),
+        dashboard: (from, to, enabled) => {
+          revenueQueries.push({ from, to, enabled });
+          return { key: "revenue" };
+        },
+      },
+    },
     "@/lib/format": {
       money: (n) => `${n} VND`,
       shortId: (id) => id.slice(0, 8),
@@ -60,6 +81,13 @@ function render(query = "scope=all", resource = {}, id) {
       default: new Proxy({}, { get: (_, key) => String(key) }),
     },
     "./ui": {
+      Modal: ({ children, onClose, className }) =>
+        React.createElement(
+          "dialog",
+          { open: true, className },
+          React.createElement("button", { onClick: onClose }, "Đóng"),
+          children,
+        ),
       PageTitle: ({ title, action }) =>
         React.createElement("header", null, title, action),
       State: ({ error, loading, empty }) =>
@@ -83,7 +111,13 @@ function render(query = "scope=all", resource = {}, id) {
   const tree = id
     ? compiledModule.exports.TransactionPage({ id })
     : compiledModule.exports.TransactionsPage();
-  return { tree, html: renderToStaticMarkup(tree), navigations };
+  return {
+    tree,
+    html: renderToStaticMarkup(tree),
+    navigations,
+    states,
+    revenueQueries,
+  };
 }
 const rows = Array.from({ length: 23 }, (_, i) => ({
   paymentId: `payment-${i}`,
@@ -110,7 +144,11 @@ test("transaction UI counts the entire result and paginates only the table", () 
   assert.match(html, /<strong>20<\/strong>/);
   assert.match(html, /<strong>3<\/strong>/);
   assert.match(html, /2:3\/23/);
-  assert.match(html, /2300 VND/);
+  assert.doesNotMatch(
+    html,
+    /giao dịch khớp bộ lọc|Tổng tiền thu ban đầu|Tra cứu thanh toán|Dữ liệu PayOS đã thu tiền/,
+  );
+  assert.match(html, /Mở rộng bảng/);
   assert.match(html, /Customer 22/);
   assert.doesNotMatch(html, />Customer 0</);
   assert.match(html, /29\/10\/26/); // Vietnam day crosses UTC midnight.
@@ -122,16 +160,11 @@ test("status filters and search apply before pagination and invalid pages clamp"
     data: rows,
   });
   assert.match(html, /1:3\/3/);
-  assert.match(html, /300 VND/);
   assert.doesNotMatch(html, />Customer 0</);
 });
 
 test("loading, error, empty and invalid dates do not show invented financial totals", () => {
   assert.match(render("scope=all", { loading: true }).html, /Loading/);
-  assert.doesNotMatch(
-    render("scope=all", { error: "Backend failed" }).html,
-    /0 VND/,
-  );
   assert.match(
     render("scope=all", { error: "Backend failed" }).html,
     /Backend failed/,
@@ -172,4 +205,77 @@ test("details preserve list filters in the back link and reject malformed IDs", 
     render("scope=all", {}, "bad-id").html,
     /Mã giao dịch không hợp lệ/,
   );
+});
+
+test("app revenue uses dashboard platform fees for the selected completion dates, never payment amounts", () => {
+  const period = render(
+    "from=2026-10-23&to=2026-10-29&q=Customer&status=Refunded",
+    { data: rows },
+  );
+  assert.match(period.html, /4500 VND/);
+  assert.doesNotMatch(period.html, /9000 VND|2300 VND/);
+  assert.deepEqual(period.revenueQueries, [
+    { from: "2026-10-23", to: "2026-10-29", enabled: true },
+  ]);
+  assert.match(render("scope=all", { data: rows }).html, /9000 VND/);
+  assert.match(
+    render("scope=all&status=Paid&q=not-found", { data: rows }).html,
+    /9000 VND/,
+  );
+  assert.equal(
+    render("from=invalid&to=invalid").revenueQueries[0].enabled,
+    false,
+  );
+});
+
+test("unavailable revenue stays unavailable while the transaction list remains readable", () => {
+  const { html, tree } = render("scope=all", { data: rows }, undefined, {
+    revenue: { error: "Revenue unavailable" },
+  });
+  const card = find(tree, (el) => el.props["aria-label"] === "Doanh thu app");
+  assert.doesNotMatch(renderToStaticMarkup(card), /VND/);
+  assert.match(html, /Thử lại/);
+  assert.match(html, /Customer 0/);
+});
+
+test("expanded table retains the selected page and can close without resetting filters", () => {
+  const closed = render("scope=all&page=2", { data: rows });
+  find(
+    closed.tree,
+    (el) =>
+      el.type === "button" && el.props.className?.includes("expandButton"),
+  ).props.onClick();
+  assert.deepEqual(closed.states, [true]);
+  const opened = render("scope=all&page=2", { data: rows }, undefined, {
+    expanded: true,
+  });
+  assert.match(opened.html, /<dialog/);
+  assert.match(opened.html, /Customer 22/);
+  assert.match(opened.html, /2:3\/23/);
+  find(opened.tree, (el) => el.props.className === "expanded").props.onClose();
+  assert.deepEqual(opened.states, [false]);
+  assert.deepEqual(opened.navigations, []);
+});
+
+test("transactions use the scrolling page layout so filters cannot squeeze the table into one row", () => {
+  const result = { exports: {} };
+  const code = ts.transpileModule(
+    readFileSync(
+      new URL("../src/components/admin-content-layout.tsx", import.meta.url),
+      "utf8",
+    ),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        jsx: ts.JsxEmit.ReactJSX,
+      },
+    },
+  ).outputText;
+  vm.runInNewContext(code, {
+    module: result,
+    exports: result.exports,
+    require,
+  });
+  assert.equal(result.exports.isAdminListRoute("transactions"), false);
+  assert.equal(result.exports.isAdminListRoute("users"), true);
 });
