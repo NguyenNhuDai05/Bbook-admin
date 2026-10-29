@@ -79,9 +79,11 @@ export const adminService = {
       () => api.statusAdminStyle(id, active),
       ["admin:style-catalog:", "admin:styles:"],
     ),
-  dashboard: (from: string, to: string) =>
-    query(`admin:dashboard:${from}:${to}`, (signal) =>
-      api.dashboard(from, to, signal),
+  dashboard: (from: string, to: string, enabled = true) =>
+    query(
+      `admin:dashboard:${from}:${to}`,
+      (signal) => api.dashboard(from, to, signal),
+      enabled,
     ),
   applications: (status: string, page = 1, size = 20) =>
     query(`admin:applications:${status}:${page}:${size}`, (signal) =>

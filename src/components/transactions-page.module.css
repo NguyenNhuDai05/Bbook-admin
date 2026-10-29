@@ -4,14 +4,29 @@
   gap: 10px;
   margin-bottom: 14px;
 }
-.summary button {
+.summary > button,
+.revenue {
   text-align: left;
-  padding: 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: white;
   color: var(--text);
+}
+.summary > button {
   cursor: pointer;
+}
+.revenue {
+  background: #fff5f8;
+}
+.summary .revenue strong {
+  font-size: 21px;
+}
+.revenue small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 5px;
 }
 .summary button[aria-pressed="true"] {
   border-color: #cf2f70;
@@ -36,7 +51,7 @@
   align-items: end;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
 .filters label {
@@ -65,44 +80,50 @@
 .table td {
   overflow-wrap: anywhere;
 }
-.totals {
-  padding: 12px 16px;
-  font-size: 13px;
-  border-bottom: 1px solid var(--border);
+.table {
+  max-height: none;
 }
-.detail {
-  display: grid;
-  gap: 16px;
+.table table {
+  min-width: 900px;
 }
-.detail dl {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 12px;
-  font-size: 13px;
+.table th {
+  position: sticky;
+  top: 0;
+  background: #fcfcfd;
+  z-index: 1;
 }
-.detail dt {
-  color: var(--muted);
+.expandButton {
+  margin-left: auto;
 }
-.detail dd {
-  margin: 0;
-  overflow-wrap: anywhere;
+.expanded:global(.modal.wide) {
+  width: calc(100vw - 32px);
+  max-width: none;
+  height: calc(100dvh - 32px);
+  max-height: none;
 }
-.detail small {
-  display: block;
-  color: var(--muted);
-  margin-top: 4px;
+.expanded[open] {
+  display: flex;
+  flex-direction: column;
 }
-.amount {
-  font-size: 28px;
+.expanded :global(.modal-body) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+}
+.expanded .table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.expanded :global(.pagination) {
+  flex-shrink: 0;
+}
+.filters .scope {
+  margin-bottom: 0;
 }
 @media (max-width: 600px) {
-  .detail dl {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-  .detail dd {
-    margin-bottom: 8px;
-  }
   .filters label {
     flex: 1;
   }
