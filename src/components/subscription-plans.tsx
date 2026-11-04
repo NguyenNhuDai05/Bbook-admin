@@ -4,6 +4,13 @@ import { request, useResource, useSubmission } from "@/lib/client";
 import css from "./subscription-plans.module.css";
 import { readPlans, readOrderPage } from "@/lib/subscription-contracts.mjs";
 import { subscriptionError } from "@/lib/subscription-errors.mjs";
+import { subscriptionStates } from "@/lib/subscription-status.mjs";
+import {
+  MuaOrderFulfillment,
+  type MuaGrant,
+  type MuaFulfillment,
+  type MuaPromotionTask,
+} from "./mua-order-fulfillment";
 
 type Plan = {
   id: string;
@@ -37,7 +44,9 @@ type OrderDetail = {
   order: Record<string, unknown>;
   allowedActions: string[];
   history: Record<string, unknown>[];
-  grants?: Record<string, unknown>[];
+  grants?: MuaGrant[];
+  fulfillment?: MuaFulfillment;
+  promotionTasks?: MuaPromotionTask[];
   supportHistory?: Record<string, unknown>[];
 };
 const money = (n: number) => n.toLocaleString("vi-VN") + "đ";
@@ -83,13 +92,15 @@ function Info({ value }: { value?: Record<string, unknown> }) {
             <dd>
               {v === null || v === ""
                 ? "—"
-                : key === "amountVnd" && typeof v === "number"
-                  ? money(v)
-                  : /At$/.test(key) && typeof v === "string"
-                    ? new Date(v).toLocaleString("vi-VN", {
-                        timeZone: "Asia/Ho_Chi_Minh",
-                      })
-                    : String(v)}
+                : key === "state" && typeof v === "string"
+                  ? subscriptionStates[v] || v
+                  : key === "amountVnd" && typeof v === "number"
+                    ? money(v)
+                    : /At$/.test(key) && typeof v === "string"
+                      ? new Date(v).toLocaleString("vi-VN", {
+                          timeZone: "Asia/Ho_Chi_Minh",
+                        })
+                      : String(v)}
             </dd>
           </div>
         ))}
@@ -195,6 +206,7 @@ export function SubscriptionPlans() {
       setEvidence("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chưa lưu được thay đổi.");
+      refresh((v) => v + 1);
     } finally {
       setBusy(false);
       lock.end();
@@ -549,7 +561,7 @@ export function SubscriptionPlans() {
                 )
                 .map((s) => (
                   <option key={s} value={s}>
-                    {s || "Tất cả trạng thái"}
+                    {subscriptionStates[s] || s || "Tất cả trạng thái"}
                   </option>
                 ))}
             </select>
@@ -578,7 +590,7 @@ export function SubscriptionPlans() {
                   </span>
                   <span>
                     {money(o.amountVnd)}
-                    <small>{o.state}</small>
+                    <small>{subscriptionStates[o.state] || o.state}</small>
                   </span>
                 </button>
               ))}
@@ -615,14 +627,11 @@ export function SubscriptionPlans() {
             <>
               <Info value={order.data?.order} />
               {order.data?.grants && (
-                <>
-                  <h3>Quyền lợi đã cấp</h3>
-                  {order.data.grants.length ? (
-                    order.data.grants.map((g, i) => <Info value={g} key={i} />)
-                  ) : (
-                    <p>Chưa có quyền lợi được cấp từ đơn này.</p>
-                  )}
-                </>
+                <MuaOrderFulfillment
+                  grants={order.data.grants}
+                  fulfillment={order.data.fulfillment}
+                  promotionTasks={order.data.promotionTasks}
+                />
               )}
               <details>
                 <summary>Lịch sử giao dịch</summary>
@@ -656,8 +665,9 @@ export function SubscriptionPlans() {
                     />
                   </label>
                   <p>
-                    Thu hồi quyền không phải hoàn tiền. Recover MUA đưa đơn vào
-                    hàng đợi cấp quyền.
+                    {kind === "MUA"
+                      ? "Thử kích hoạt lại chỉ xử lý thời hạn nổi bật trong app từ khoản tiền đã xác minh, không thu tiền lần nữa và không đánh dấu đã đăng bài. Khôi phục xử lý đưa đơn cần kiểm tra vào hàng đợi."
+                      : "Thu hồi quyền không phải hoàn tiền."}
                   </p>
                   <div className={css.actions}>
                     {order.data.allowedActions.map((action) => (
@@ -668,7 +678,7 @@ export function SubscriptionPlans() {
                         onClick={() => {
                           if (
                             window.confirm(
-                              `Xác nhận ${action === "recover" ? "khôi phục xử lý" : "thu hồi quyền"} cho đơn ${orderId}?`,
+                              `Xác nhận ${action === "retry" ? "thử kích hoạt nổi bật trong app" : action === "recover" ? "khôi phục xử lý" : "thu hồi quyền"} cho đơn ${orderId}?`,
                             )
                           )
                             void mutate(
@@ -678,9 +688,11 @@ export function SubscriptionPlans() {
                             );
                         }}
                       >
-                        {action === "recover"
-                          ? "Khôi phục xử lý"
-                          : "Thu hồi quyền"}
+                        {action === "retry"
+                          ? "Thử kích hoạt lại trong app"
+                          : action === "recover"
+                            ? "Khôi phục xử lý"
+                            : "Thu hồi quyền"}
                       </button>
                     ))}
                   </div>
