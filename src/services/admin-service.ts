@@ -49,10 +49,10 @@ export const adminService = {
     query(`admin:dashboard:transactions:${from}:${to}:${page}`, (signal) =>
       api.dashboardTransactions(from, to, page, signal),
     ),
-  dashboardTransaction: (id: string) =>
+  dashboardTransaction: (id: string, type?: string) =>
     query(
-      `admin:dashboard:transaction:${id}`,
-      (signal) => api.dashboardTransaction(id, signal),
+      `admin:dashboard:transaction:${id}:${type || "Booking"}`,
+      (signal) => api.dashboardTransaction(id, signal, type),
       !!id,
     ),
   dashboardReview: (id: string) =>

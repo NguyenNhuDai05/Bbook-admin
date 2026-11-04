@@ -5,7 +5,52 @@ export const paymentLabels = {
   PartiallyRefunded: "Hoàn tiền một phần",
   RefundPending: "Đang chờ hoàn tiền",
   Forfeited: "Đã khấu trừ cọc",
+  Fulfilled: "Đã cấp quyền lợi",
+  PaidAwaitingFulfillment: "Đã thu tiền · Đang cấp quyền",
+  ManualReview: "Đã thu tiền · Cần kiểm tra",
+  Revoked: "Đã thu hồi quyền",
+  Cancelled: "Đã hủy · Có ghi nhận thu tiền",
 };
+
+/** @param {import('./types').Paged<import('./dashboard').DashboardTransaction>} page */
+export function readTransactionPage(page) {
+  for (const row of page.items) {
+    const type = row.transactionType || "Booking";
+    if (
+      !["Booking", "CustomerAi", "MuaPlan"].includes(type) ||
+      (type === "Booking"
+        ? typeof row.bookingId !== "string" || !row.bookingId
+        : row.bookingId !== null || typeof row.productName !== "string") ||
+      !Number.isFinite(row.amount) ||
+      row.amount <= 0 ||
+      !Number.isFinite(Date.parse(row.paidAt))
+    )
+      throw new Error(
+        "Dữ liệu giao dịch booking/gói không hợp lệ. Vui lòng thử lại.",
+      );
+  }
+  return page;
+}
+
+/** @param {import('./dashboard').DashboardTransaction} item */
+export function transactionLabel(item) {
+  return item.transactionType === "CustomerAi"
+    ? "Gói AI Customer"
+    : item.transactionType === "MuaPlan"
+      ? "Gói Visibility MUA"
+      : "Booking";
+}
+/** @param {import('./dashboard').DashboardTransaction} item */
+export function transactionKey(item) {
+  return `${item.transactionType || "Booking"}:${item.paymentId}`;
+}
+/** @param {import('./dashboard').DashboardTransaction} item */
+export function transactionHref(item, query = "") {
+  const params = new URLSearchParams(query);
+  if (item.transactionType) params.set("type", item.transactionType);
+  else params.delete("type");
+  return `/transactions/${item.paymentId}${params.size ? `?${params}` : ""}`;
+}
 
 /**
  * Read the entire bounded result before filtering or counting. Never present
@@ -36,7 +81,7 @@ export async function collectTransactions(load) {
   }
   if (
     items.length !== first.total ||
-    new Set(items.map((x) => x.paymentId)).size !== first.total
+    new Set(items.map(transactionKey)).size !== first.total
   )
     throw new Error(
       "Danh sách giao dịch vừa thay đổi. Vui lòng làm mới dữ liệu.",
@@ -45,12 +90,13 @@ export async function collectTransactions(load) {
 }
 
 /** @param {import('./dashboard').DashboardTransaction[]} items */
-export function filterTransactions(items, search = "", status = "") {
+export function filterTransactions(items, search = "", status = "", type = "") {
   const term = search.trim().toLocaleLowerCase("vi-VN");
   return items.filter(
     (x) =>
       (!status || x.status === status) &&
-      `${x.paymentId} ${x.bookingId} ${x.providerOrderCode} ${x.customerName || ""}`
+      (!type || (x.transactionType || "Booking") === type) &&
+      `${x.paymentId} ${x.bookingId || ""} ${x.providerOrderCode || ""} ${x.customerName || ""} ${x.productId || ""} ${x.productName || ""} ${transactionLabel(x)}`
         .toLocaleLowerCase("vi-VN")
         .includes(term),
   );

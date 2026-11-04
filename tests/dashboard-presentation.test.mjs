@@ -121,6 +121,41 @@ test("dashboard contract rejects missing metrics and inconsistent reviews instea
     serviceReviews: reviews,
   };
   assert.equal(validateDashboard(data), data);
+  const breakdown = {
+    bookingRevenue: 6305000,
+    planRevenue: 95000,
+    aiRevenue: 20000,
+    visibilityRevenue: 75000,
+  };
+  const combined = {
+    ...data,
+    revenueScope: "BookingAndPlans",
+    current: { ...period, ...breakdown },
+    previous: { ...period, ...breakdown },
+    lifetime: { ...data.lifetime, ...breakdown },
+    daily: data.daily.map((day) => ({
+      ...day,
+      bookingRevenue: 6305000,
+      planRevenue: 95000,
+    })),
+  };
+  assert.equal(validateDashboard(combined), combined);
+  assert.throws(
+    () =>
+      validateDashboard({
+        ...combined,
+        current: { ...combined.current, planRevenue: 1 },
+      }),
+    /không khớp/,
+  );
+  assert.throws(
+    () =>
+      validateDashboard({
+        ...combined,
+        daily: [{ ...combined.daily[0], planRevenue: 1 }],
+      }),
+    /không khớp/,
+  );
   assert.throws(() => validateDashboard({ ...data, lifetime: undefined }));
   assert.throws(() =>
     validateDashboard({

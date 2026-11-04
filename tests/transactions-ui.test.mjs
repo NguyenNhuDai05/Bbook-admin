@@ -155,6 +155,121 @@ test("transaction UI counts the entire result and paginates only the table", () 
   assert.match(html, /transactions\/payment-22\?scope=all&amp;page=2/);
 });
 
+test("history shows AI and Visibility purchases without inventing booking links and filters by type", () => {
+  const plans = [
+    {
+      ...rows[0],
+      bookingId: null,
+      transactionType: "CustomerAi",
+      productName: "AI trọn đời",
+      status: "Fulfilled",
+    },
+    {
+      ...rows[1],
+      bookingId: null,
+      transactionType: "MuaPlan",
+      productName: "Visibility 60 ngày",
+      status: "PaidAwaitingFulfillment",
+    },
+  ];
+  const all = render("scope=all", { data: plans }).html;
+  assert.match(all, /AI trọn đời/);
+  assert.match(all, /Visibility 60 ngày/);
+  assert.match(all, /type=CustomerAi/);
+  assert.match(all, /type=MuaPlan/);
+  assert.doesNotMatch(all, /bookings\/null|Booking #null/);
+  const mua = render("scope=all&kind=MuaPlan", { data: plans }).html;
+  assert.match(mua, /Visibility 60 ngày/);
+  assert.doesNotMatch(mua, /AI trọn đời/);
+  assert.match(mua, /1:1\/1/);
+});
+
+test("plan transaction details render account and purchased benefits without accessing a booking", () => {
+  const code = ts.transpileModule(
+    readFileSync(
+      new URL("../src/components/dashboard-transactions.tsx", import.meta.url),
+      "utf8",
+    ),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        jsx: ts.JsxEmit.ReactJSX,
+        target: ts.ScriptTarget.ES2022,
+      },
+    },
+  ).outputText;
+  const target = { exports: {} };
+  const queries = [];
+  const data = {
+    paymentId: "ai-id",
+    bookingId: null,
+    transactionType: "CustomerAi",
+    amount: 35000,
+    status: "Fulfilled",
+    provider: "PayOS",
+    providerOrderCode: 123,
+    customerName: "Customer",
+    customerId: "owner",
+    productId: "ai-v2",
+    productName: "AI trọn đời",
+    planVersion: 2,
+    lifetime: true,
+    origin: "NativeApp",
+    includedInRevenue: true,
+    paidAt: "2026-11-04T00:00:00Z",
+    createdAt: "2026-11-03T23:00:00Z",
+    updatedAt: "2026-11-04T00:00:00Z",
+    refunds: [],
+    booking: null,
+  };
+  const mocks = {
+    "@/lib/client": {
+      useResource: () => ({ data, loading: false, error: "" }),
+    },
+    "@/services/admin-service": {
+      adminService: {
+        dashboardTransaction: (id, type) => {
+          queries.push({ id, type });
+          return {};
+        },
+      },
+    },
+    "@/lib/transactions.mjs": transactions,
+    "@/lib/format": {
+      money: (n) => `${n} VND`,
+      statusLabels: {},
+      shortId: (id) => id,
+    },
+    "./dashboard.module.css": { __esModule: true, default: {} },
+    "./ui": {
+      Modal: ({ children }) => React.createElement("div", null, children),
+    },
+    "next/link": {
+      default: ({ children, ...props }) =>
+        React.createElement("a", props, children),
+    },
+  };
+  vm.runInNewContext(code, {
+    exports: target.exports,
+    module: target,
+    require: (name) => mocks[name] || require(name),
+    Intl,
+  });
+  const html = renderToStaticMarkup(
+    React.createElement(target.exports.TransactionDetail, {
+      id: "ai-id",
+      type: "CustomerAi",
+      embedded: true,
+      onClose() {},
+    }),
+  );
+  assert.match(html, /AI trọn đời/);
+  assert.match(html, /35000 VND/);
+  assert.match(html, /Ứng dụng BBook/);
+  assert.doesNotMatch(html, /\/bookings\//);
+  assert.deepEqual(queries, [{ id: "ai-id", type: "CustomerAi" }]);
+});
+
 test("status filters and search apply before pagination and invalid pages clamp", () => {
   const { html } = render("scope=all&status=Refunded&q=Customer&page=999", {
     data: rows,

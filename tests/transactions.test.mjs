@@ -3,7 +3,55 @@ import assert from "node:assert/strict";
 import {
   collectTransactions,
   filterTransactions,
+  transactionHref,
+  transactionKey,
+  readTransactionPage,
 } from "../src/lib/transactions.mjs";
+
+test("booking and plan ledgers keep distinct identities and searchable product metadata", async () => {
+  const rows = [
+    { ...item(1), paymentId: "same-id", transactionType: "Booking" },
+    {
+      ...item(2),
+      paymentId: "same-id",
+      bookingId: null,
+      transactionType: "CustomerAi",
+      productId: "ai_v2",
+      productName: "AI trọn đời",
+      status: "Fulfilled",
+    },
+    {
+      ...item(3),
+      paymentId: "same-id",
+      bookingId: null,
+      transactionType: "MuaPlan",
+      productName: "Visibility 60 ngày",
+      status: "PaidAwaitingFulfillment",
+    },
+  ];
+  assert.equal(
+    (await collectTransactions(async () => paged(rows, 3))).length,
+    3,
+  );
+  assert.equal(new Set(rows.map(transactionKey)).size, 3);
+  assert.equal(filterTransactions(rows, "ai_v2").length, 1);
+  assert.equal(
+    filterTransactions(rows, "visibility", "PaidAwaitingFulfillment", "MuaPlan")
+      .length,
+    1,
+  );
+  assert.equal(filterTransactions(rows, "", "", "Booking").length, 1);
+  const href = transactionHref(rows[1], "scope=all&page=2");
+  const query = new URL(href, "https://admin.test").searchParams;
+  assert.equal(query.get("type"), "CustomerAi");
+  assert.equal(query.get("page"), "2");
+  assert.equal(
+    new URL(transactionHref(rows[0]), "https://admin.test").searchParams.get(
+      "type",
+    ),
+    "Booking",
+  );
+});
 
 const item = (id, status = "Paid") => ({
   paymentId: `payment-${id}`,
@@ -19,6 +67,35 @@ const paged = (items, total, page = 1, pageSize = 20) => ({
   total,
   page,
   pageSize,
+});
+
+test("transaction contract rejects a plan without its source instead of showing a booking", () => {
+  const book = item(1);
+  assert.equal(readTransactionPage(paged([book], 1)).items[0], book);
+  assert.throws(
+    () => readTransactionPage(paged([{ ...book, bookingId: null }], 1)),
+    /không hợp lệ/,
+  );
+  assert.throws(
+    () =>
+      readTransactionPage(paged([{ ...book, transactionType: "Unknown" }], 1)),
+    /không hợp lệ/,
+  );
+  assert.doesNotThrow(() =>
+    readTransactionPage(
+      paged(
+        [
+          {
+            ...book,
+            bookingId: null,
+            transactionType: "CustomerAi",
+            productName: "AI",
+          },
+        ],
+        1,
+      ),
+    ),
+  );
 });
 
 test("counts all pages without collapsing separate payments for one booking", async () => {

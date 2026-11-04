@@ -6,7 +6,13 @@ import { Maximize2, RefreshCw } from "lucide-react";
 import { adminService } from "@/services/admin-service";
 import { useResource } from "@/lib/client";
 import { money, shortId } from "@/lib/format";
-import { filterTransactions, paymentLabels } from "@/lib/transactions.mjs";
+import {
+  filterTransactions,
+  paymentLabels,
+  transactionLabel,
+  transactionKey,
+  transactionHref,
+} from "@/lib/transactions.mjs";
 import { presetRange, validRange } from "@/lib/dashboard-presentation.mjs";
 import { Modal, PageTitle, Pagination, State } from "./ui";
 import { TransactionDetail } from "./dashboard-transactions";
@@ -35,6 +41,7 @@ export function TransactionsPage() {
     : (params.get("to") ?? (useDefault ? defaultRange.to : ""));
   const search = params.get("q") || "";
   const status = params.get("status") || "";
+  const type = params.get("kind") || "";
   const valid = all || validRange(from, to);
   const resource = useResource(adminService.transactions(from, to, valid));
   const revenue = useResource(
@@ -47,7 +54,7 @@ export function TransactionsPage() {
   const appRevenue = revenue.data?.lifetime.revenue;
   const ready =
     valid && !resource.loading && !resource.error && !!resource.data;
-  const searched = filterTransactions(resource.data || [], search);
+  const searched = filterTransactions(resource.data || [], search, "", type);
   const rows = filterTransactions(searched, "", status);
   const pageValue = Number(params.get("page") || 1);
   const page = Math.min(
@@ -99,8 +106,8 @@ export function TransactionsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Giao dịch / Booking</th>
-                    <th>Khách hàng</th>
+                    <th>Giao dịch / Đơn mua</th>
+                    <th>Người thanh toán</th>
                     <th>Mã đơn PayOS</th>
                     <th>Số tiền</th>
                     <th>Thu tiền</th>
@@ -110,17 +117,22 @@ export function TransactionsPage() {
                 </thead>
                 <tbody>
                   {visible.map((x) => (
-                    <tr key={x.paymentId}>
+                    <tr key={transactionKey(x)}>
                       <td>
                         <span title={x.paymentId}>#{shortId(x.paymentId)}</span>
                         <small>
-                          <Link href={`/bookings/${x.bookingId}`}>
-                            Booking #{shortId(x.bookingId)}
-                          </Link>
+                          {x.bookingId ? (
+                            <Link href={`/bookings/${x.bookingId}`}>
+                              Booking #{shortId(x.bookingId)}
+                            </Link>
+                          ) : (
+                            <span>{x.productName || transactionLabel(x)}</span>
+                          )}
                         </small>
+                        <small>{transactionLabel(x)}</small>
                       </td>
                       <td>{x.customerName || "Khách hàng"}</td>
-                      <td>{x.providerOrderCode}</td>
+                      <td>{x.providerOrderCode || "—"}</td>
                       <td>{money(x.amount)}</td>
                       <td>{time(x.paidAt)}</td>
                       <td>
@@ -134,7 +146,7 @@ export function TransactionsPage() {
                         <Link
                           className="text-button"
                           aria-label={`Xem giao dịch ${x.paymentId}`}
-                          href={`/transactions/${x.paymentId}?${detailParams}`}
+                          href={transactionHref(x, detailParams.toString())}
                         >
                           Xem chi tiết
                         </Link>
@@ -180,7 +192,7 @@ export function TransactionsPage() {
         <section
           className={s.revenue}
           aria-label="Tổng doanh thu app"
-          title="Tổng doanh thu từ đầu đến nay, cùng số liệu Tổng doanh thu trên Dashboard. Doanh thu trong kỳ tính theo ngày hoàn thành booking. Không lọc theo từ khóa hoặc trạng thái giao dịch."
+          title="Tổng doanh thu từ đầu đến nay, cùng số liệu Tổng doanh thu trên Dashboard. Gồm phí booking hoàn thành và tiền gói đã xác minh thu, loại gói đã hoàn tiền. Không lọc theo từ khóa hoặc trạng thái giao dịch."
         >
           <span>Tổng doanh thu app</span>
           <strong>
@@ -230,7 +242,7 @@ export function TransactionsPage() {
       </div>
       <section className="panel list-panel">
         <form
-          key={`${from}:${to}:${search}:${status}`}
+          key={`${from}:${to}:${search}:${status}:${type}`}
           className={s.filters}
           onSubmit={(event) => {
             event.preventDefault();
@@ -243,6 +255,7 @@ export function TransactionsPage() {
               to: end,
               q: String(data.get("q")).trim(),
               status: String(data.get("status")),
+              kind: String(data.get("kind") || ""),
             });
           }}
         >
@@ -251,7 +264,7 @@ export function TransactionsPage() {
             <input
               name="q"
               defaultValue={search}
-              placeholder="Mã giao dịch, booking, mã PayOS, tên khách"
+              placeholder="Mã giao dịch, booking, tên gói, mã PayOS, người mua"
             />
           </label>
           <label>
@@ -261,6 +274,15 @@ export function TransactionsPage() {
           <label>
             Đến ngày thu tiền
             <input name="to" type="date" defaultValue={to} />
+          </label>
+          <label>
+            Loại giao dịch
+            <select name="kind" defaultValue={type}>
+              <option value="">Tất cả</option>
+              <option value="Booking">Booking</option>
+              <option value="CustomerAi">Gói AI Customer</option>
+              <option value="MuaPlan">Gói Visibility MUA</option>
+            </select>
           </label>
           <label>
             Trạng thái
@@ -280,7 +302,13 @@ export function TransactionsPage() {
             className="button secondary"
             type="button"
             onClick={() =>
-              update({ q: "", status: "", scope: "", ...defaultRange })
+              update({
+                q: "",
+                status: "",
+                kind: "",
+                scope: "",
+                ...defaultRange,
+              })
             }
           >
             Đặt lại
@@ -355,7 +383,13 @@ export function TransactionPage({ id }: { id: string }) {
           </Link>
         }
       />
-      <TransactionDetail key={id} id={id} embedded onClose={() => {}} />
+      <TransactionDetail
+        key={`${params.get("type")}:${id}`}
+        id={id}
+        type={params.get("type") || undefined}
+        embedded
+        onClose={() => {}}
+      />
     </>
   );
 }

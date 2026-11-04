@@ -315,6 +315,12 @@ export function OperationsDashboard() {
                 Tổng doanh thu
               </div>
               <strong>{money(data.lifetime.revenue)}</strong>
+              {data.revenueScope === "BookingAndPlans" && (
+                <span className={s.delta}>
+                  Booking: {money(data.lifetime.bookingRevenue!)} · Gói:{" "}
+                  {money(data.lifetime.planRevenue!)}
+                </span>
+              )}
             </section>
             <section className={s.kpi}>
               <div className={s.kpiLabel}>
@@ -607,8 +613,9 @@ export function OperationsDashboard() {
             />
           </details>
           <p className={s.footnote}>
-            Doanh thu là phí lưu trên booking hoàn thành / tự hoàn thành, theo
-            ngày hoàn thành; chưa trừ điều chỉnh kế toán từ hoàn tiền.
+            {data.revenueScope === "BookingAndPlans"
+              ? "Doanh thu = phí nền tảng của booking hoàn thành / tự hoàn thành + tiền gói AI và MUA đã xác minh thu. Booking tính theo ngày hoàn thành, gói tính theo ngày xác minh tiền (giờ Việt Nam). Gói đã hoàn tiền không cộng doanh thu; thu hồi quyền không tự trừ tiền. Phí booking chưa trừ điều chỉnh kế toán từ hoàn tiền."
+              : "Backend hiện chỉ thống kê phí booking. Cần cập nhật backend để cộng doanh thu bán gói."}
           </p>
         </>
       )}
