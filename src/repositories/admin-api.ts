@@ -8,6 +8,7 @@ import {
   type DashboardTransactionDetail,
 } from "@/lib/dashboard";
 import { assertArray, assertPaged } from "@/lib/contracts.mjs";
+import { readTransactionPage } from "@/lib/transactions.mjs";
 import type {
   Application,
   ApplicationDetail,
@@ -67,10 +68,10 @@ export const adminApi = {
         "providerOrderCode",
       ],
       signal,
-    ),
-  dashboardTransaction: (id: string, signal: AbortSignal) =>
+    ).then(readTransactionPage),
+  dashboardTransaction: (id: string, signal: AbortSignal, type?: string) =>
     request<DashboardTransactionDetail>(
-      `admin/dashboard/transactions/${id}`,
+      `admin/dashboard/transactions/${id}${type ? `?${params({ type })}` : ""}`,
       "GET",
       undefined,
       signal,

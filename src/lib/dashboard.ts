@@ -1,5 +1,9 @@
 export interface DashboardPeriod {
   revenue: number;
+  bookingRevenue?: number;
+  planRevenue?: number;
+  aiRevenue?: number;
+  visibilityRevenue?: number;
   bookingValue: number;
   completedBookings: number;
   newUsers: number;
@@ -37,8 +41,13 @@ export interface DashboardReviewDetail extends Omit<
   };
 }
 export interface DashboardData {
+  revenueScope?: "BookingAndPlans";
   lifetime: {
     revenue: number;
+    bookingRevenue?: number;
+    planRevenue?: number;
+    aiRevenue?: number;
+    visibilityRevenue?: number;
     reviewCount: number;
     averageRating: number | null;
     successfulTransactions: number;
@@ -49,6 +58,8 @@ export interface DashboardData {
   daily: {
     date: string;
     revenue: number;
+    bookingRevenue?: number;
+    planRevenue?: number;
     newUsers: number;
     newMuas: number;
     bookings: number;
@@ -166,16 +177,45 @@ export function validateDashboard(value: DashboardData): DashboardData {
     )
   )
     throw new Error("Dữ liệu thống kê Backend không hợp lệ.");
+  if (value.revenueScope === "BookingAndPlans") {
+    for (const row of [value.current, value.previous, value.lifetime]) {
+      if (
+        ![
+          row.bookingRevenue,
+          row.planRevenue,
+          row.aiRevenue,
+          row.visibilityRevenue,
+        ].every(valid) ||
+        Math.abs(row.revenue - row.bookingRevenue! - row.planRevenue!) > 0.01 ||
+        Math.abs(row.planRevenue! - row.aiRevenue! - row.visibilityRevenue!) >
+          0.01
+      )
+        throw new Error("Số liệu doanh thu booking và gói không khớp.");
+    }
+    if (
+      !value.daily.every(
+        (row) =>
+          valid(row.bookingRevenue) &&
+          valid(row.planRevenue) &&
+          Math.abs(row.revenue - row.bookingRevenue! - row.planRevenue!) <=
+            0.01,
+      )
+    )
+      throw new Error("Số liệu doanh thu theo ngày không khớp.");
+  }
   return value;
 }
 
 export interface DashboardTransaction {
   paymentId: string;
-  bookingId: string;
+  bookingId: string | null;
+  transactionType?: "Booking" | "CustomerAi" | "MuaPlan";
+  productId?: string | null;
+  productName?: string | null;
   amount: number;
   paidAt: string;
   status: string;
-  providerOrderCode: number;
+  providerOrderCode: number | null;
   customerName: string | null;
 }
 export interface DashboardTransactionDetail extends DashboardTransaction {
@@ -187,7 +227,13 @@ export interface DashboardTransactionDetail extends DashboardTransaction {
   provider: string;
   providerReference: string | null;
   muaName: string | null;
-  booking: DashboardReviewDetail["booking"] & { muaId: string };
+  booking: (DashboardReviewDetail["booking"] & { muaId: string }) | null;
+  planVersion?: number;
+  durationDays?: number | null;
+  lifetime?: boolean;
+  revokedAt?: string | null;
+  origin?: string;
+  includedInRevenue?: boolean;
   refunds: {
     refundId: string;
     amount: number;
