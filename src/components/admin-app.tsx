@@ -44,6 +44,8 @@ import { Notifications, Directory, PlannedPage, Bookings } from "./other-pages";
 import { Styles } from "./styles-page";
 import { WebsiteAnalytics } from "./website-analytics";
 import { AdminContentLayout, isAdminListRoute } from "./admin-content-layout";
+import { SubscriptionPlans } from "./subscription-plans";
+import { MuaPromotions } from "./mua-promotions";
 import referenceCss from "./admin-reference.module.css";
 const groups = [
   {
@@ -58,6 +60,8 @@ const groups = [
     items: [
       { key: "users", label: "Người dùng", icon: Users },
       { key: "muas", label: "Makeup Artist", icon: Sparkles },
+      { key: "plans", label: "Gói & quyền lợi", icon: WalletCards },
+      { key: "mua-promotions", label: "Quảng bá MUA", icon: Sparkles },
       { key: "bookings", label: "Booking", icon: CalendarDays },
       { key: "complaints", label: "Khiếu nại", icon: MessageCircleWarning },
     ],
@@ -150,6 +154,8 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
     page = <VerificationDetail {...props} id={id} />;
   else if (key === "verification") page = <Applications {...props} />;
   else if (key === "muas") page = <Applications {...props} management />;
+  else if (key === "plans") page = <SubscriptionPlans />;
+  else if (key === "mua-promotions") page = <MuaPromotions />;
   else if (key === "bank-accounts") page = <BankAccounts />;
   else if (key === "payouts" || key === "refunds")
     page = id ? (
