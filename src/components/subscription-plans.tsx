@@ -203,12 +203,14 @@ export function SubscriptionPlans() {
   return (
     <section className={css.page}>
       <header className={css.hero}>
-        <span>QUẢN LÝ SUBSCRIPTION</span>
-        <h1>Gói & quyền lợi</h1>
-        <p>
-          Quản lý sản phẩm, theo dõi đơn và chăm sóc quyền lợi của từng tài
-          khoản.
-        </p>
+        <div className={css.heroCopy}>
+          <span>QUẢN LÝ SUBSCRIPTION</span>
+          <h1>Gói & quyền lợi</h1>
+          <p>
+            Quản lý sản phẩm, theo dõi đơn và chăm sóc quyền lợi của từng tài
+            khoản.
+          </p>
+        </div>
         <button
           className="button primary"
           disabled={plans.loading || !!plans.error}

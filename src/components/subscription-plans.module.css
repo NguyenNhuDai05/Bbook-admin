@@ -1,30 +1,46 @@
 .page {
   display: grid;
-  gap: 24px;
+  gap: 18px;
+  min-width: 0;
   padding-bottom: 40px;
 }
 .hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
   border: 1px solid #f4d7e4;
-  border-radius: 24px;
-  padding: 32px;
+  border-radius: 18px;
+  padding: 18px 22px;
   background:
     radial-gradient(ellipse at top right, #ffd6e7, transparent 70%),
     linear-gradient(120deg, #fff, #fff4f8);
   color: #30192c;
 }
-.hero > span {
-  font-size: 11px;
-  letter-spacing: 2px;
+.heroCopy {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.heroCopy > span {
+  font-size: 10px;
+  letter-spacing: 1.5px;
   color: #ad2859;
   font-weight: 700;
 }
 .hero h1 {
-  margin: 12px 0;
-  font-size: 32px;
+  margin: 6px 0;
+  font-size: 24px;
+  line-height: 1.25;
 }
 .hero p {
   color: #7b6874;
-  margin-bottom: 22px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.hero > button {
+  flex-shrink: 0;
 }
 .tabs,
 .actions,
@@ -109,7 +125,7 @@
 }
 .fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px;
 }
 .editor label {
@@ -208,4 +224,26 @@
   font-size: 13px;
   overflow-wrap: anywhere;
   color: #432838;
+}
+@media (max-width: 600px) {
+  .hero {
+    padding: 16px;
+  }
+  .heroCopy {
+    flex-basis: 100%;
+  }
+  .tabs {
+    gap: 8px;
+  }
+  .tabs button {
+    padding: 10px 14px;
+  }
+  .card,
+  .editor {
+    padding: 18px;
+  }
+  .info > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }
