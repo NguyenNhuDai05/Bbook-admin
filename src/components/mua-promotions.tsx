@@ -83,8 +83,9 @@ export function MuaPromotions() {
         <div>
           <h1>Quảng bá MUA</h1>
           <p>
-            Một bài Facebook cho mỗi chu kỳ 30 ngày, kể cả quà activation. Biên
-            tập từ portfolio đã được MUA cho phép sử dụng.
+            Đội BBook chủ động liên hệ MUA, biên tập và đăng bài Facebook cho
+            mỗi chu kỳ 30 ngày từ portfolio được cho phép sử dụng. Nổi bật trong
+            app được kích hoạt tự động, độc lập với tiến độ đăng bài.
           </p>
         </div>
         <button
