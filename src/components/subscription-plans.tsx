@@ -3,6 +3,7 @@ import { useState } from "react";
 import { request, useResource, useSubmission } from "@/lib/client";
 import css from "./subscription-plans.module.css";
 import { readPlans, readOrderPage } from "@/lib/subscription-contracts.mjs";
+import { subscriptionError } from "@/lib/subscription-errors.mjs";
 
 type Plan = {
   id: string;
@@ -143,7 +144,11 @@ export function SubscriptionPlans() {
   const plans = useResource<Plan[]>({
     key: `plans:${revision}`,
     load: (signal) =>
-      request<Plan[]>("admin/plans", "GET", undefined, signal).then(readPlans),
+      request<Plan[]>("admin/plans", "GET", undefined, signal)
+        .then(readPlans)
+        .catch((error) => {
+          throw subscriptionError(error);
+        }),
   });
   const detail = useResource<Detail>({
     key: `plan:${detailId}:${historyPage}:${revision}`,
@@ -206,6 +211,7 @@ export function SubscriptionPlans() {
         </p>
         <button
           className="button primary"
+          disabled={plans.loading || !!plans.error}
           onClick={() => {
             setEditing({ ...blank });
             setReason("");
@@ -238,6 +244,12 @@ export function SubscriptionPlans() {
             <p role="alert">{plans.error}</p>
           ) : (
             <div className={css.grid}>
+              {plans.data?.length === 0 && (
+                <p>
+                  Danh mục chưa có gói nào. Cần kiểm tra đồng bộ hai gói
+                  Visibility và AI trước khi tạo thêm gói.
+                </p>
+              )}
               {plans.data?.map((p) => (
                 <article className={css.card} key={p.id}>
                   <div className={css.top}>
