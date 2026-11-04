@@ -5,7 +5,6 @@ const listRoutes = new Set([
   "users",
   "muas",
   "mua-promotions",
-  "plans",
   "complaints",
   "verification",
   "bank-accounts",
