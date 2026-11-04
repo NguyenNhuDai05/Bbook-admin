@@ -1,17 +1,29 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
 import { sessionService } from "@/services/session-service";
 import { useSubmission } from "@/lib/client";
 import { SubmitButton } from "@/components/ui";
+import { LoginRateLimitError } from "@/lib/login-errors.mjs";
 export default function Login() {
   const submission = useSubmission();
   const { busy } = submission;
   const [error, setError] = useState(""),
     [visible, setVisible] = useState(false);
+  const [retryAt, setRetryAt] = useState(0);
+  const [remaining, setRemaining] = useState(0);
+  useEffect(() => {
+    if (!retryAt) return;
+    const interval = setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+      setRemaining(seconds);
+      if (seconds === 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [retryAt]);
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!submission.begin()) return;
+    if (retryAt > Date.now() || !submission.begin()) return;
     setError("");
     const form = new FormData(event.currentTarget);
     try {
@@ -23,6 +35,10 @@ export default function Login() {
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/");
     } catch (err) {
+      if (err instanceof LoginRateLimitError) {
+        setRemaining(err.retryAfterSeconds);
+        setRetryAt(Date.now() + err.retryAfterSeconds * 1000);
+      }
       setError(err instanceof Error ? err.message : "Không thể đăng nhập.");
     } finally {
       submission.end();
@@ -78,7 +94,9 @@ export default function Login() {
               {error}
             </p>
           )}
-          <SubmitButton busy={busy}>Đăng nhập</SubmitButton>
+          <SubmitButton busy={busy} disabled={remaining > 0}>
+            {remaining > 0 ? `Thử lại sau ${remaining} giây` : "Đăng nhập"}
+          </SubmitButton>
         </form>
         <div className="login-foot">
           <ShieldCheck size={15} />

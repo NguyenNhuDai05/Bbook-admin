@@ -9,6 +9,7 @@ import {
   verifyAdminToken,
 } from "@/lib/server";
 import { isAdmin, isSameOrigin } from "@/lib/policy.mjs";
+import { loginFailure } from "@/lib/login-errors.mjs";
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request.headers.get("origin"), requestOrigin(request)))
     return NextResponse.json(
@@ -18,6 +19,8 @@ export async function POST(request: NextRequest) {
   try {
     const input = await request.json();
     if (
+      !input ||
+      typeof input !== "object" ||
       typeof input.email !== "string" ||
       typeof input.password !== "string" ||
       input.email.length > 254 ||
@@ -34,16 +37,13 @@ export async function POST(request: NextRequest) {
         password: input.password,
       }),
     });
-    if (!response.ok)
-      return NextResponse.json(
-        {
-          message:
-            response.status === 401
-              ? "Email hoặc mật khẩu không chính xác."
-              : "Chưa thể đăng nhập. Vui lòng thử lại.",
-        },
-        { status: response.status },
-      );
+    if (!response.ok) {
+      const failure = loginFailure(response.status, response.headers);
+      return NextResponse.json(failure.payload, {
+        status: response.status,
+        headers: failure.headers,
+      });
+    }
     const auth = await response.json();
     if (!isAdmin(auth.role) || typeof auth.token !== "string")
       return NextResponse.json(

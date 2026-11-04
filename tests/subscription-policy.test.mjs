@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { allowedApiPath } from "../src/lib/policy.mjs";
+import { subscriptionError } from "../src/lib/subscription-errors.mjs";
+test("missing catalog endpoint reports backend deployment instead of missing products", () => {
+  assert.match(
+    subscriptionError({ status: 404 }).message,
+    /triển khai backend mới/,
+  );
+  const forbidden = { status: 403, message: "Permission denied" };
+  assert.equal(subscriptionError(forbidden), forbidden);
+});
 import {
   readPlans,
   readOrderPage,
