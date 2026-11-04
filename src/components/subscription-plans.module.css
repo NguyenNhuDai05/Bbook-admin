@@ -1,0 +1,211 @@
+.page {
+  display: grid;
+  gap: 24px;
+  padding-bottom: 40px;
+}
+.hero {
+  border: 1px solid #f4d7e4;
+  border-radius: 24px;
+  padding: 32px;
+  background:
+    radial-gradient(ellipse at top right, #ffd6e7, transparent 70%),
+    linear-gradient(120deg, #fff, #fff4f8);
+  color: #30192c;
+}
+.hero > span {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #ad2859;
+  font-weight: 700;
+}
+.hero h1 {
+  margin: 12px 0;
+  font-size: 32px;
+}
+.hero p {
+  color: #7b6874;
+  margin-bottom: 22px;
+}
+.tabs,
+.actions,
+.top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tabs button {
+  border: 0;
+  padding: 12px 20px;
+  border-radius: 24px;
+  background: #fff;
+  cursor: pointer;
+}
+.tabs .active {
+  color: #b12561;
+  background: #ffe6ef;
+  font-weight: 700;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 20px;
+}
+.card,
+.editor {
+  border: 1px solid #eedce5;
+  border-radius: 22px;
+  padding: 26px;
+  background: #fff;
+  box-shadow: 0 8px 26px #48223a08;
+}
+.card h2 {
+  font-size: 22px;
+  margin: 22px 0 12px;
+}
+.top {
+  justify-content: space-between;
+}
+.top span {
+  background: #ffe6ef;
+  border-radius: 20px;
+  padding: 7px 12px;
+  color: #b12561;
+  font-size: 12px;
+}
+.top small {
+  color: #81737b;
+}
+.price {
+  display: block;
+  font-size: 30px;
+  color: #be2966;
+}
+.price small {
+  font-size: 14px;
+}
+.card p {
+  color: #7b6874;
+  min-height: 50px;
+  line-height: 1.65;
+}
+.card code {
+  display: block;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  margin-bottom: 22px;
+  color: #93808a;
+}
+.editor {
+  display: grid;
+  gap: 16px;
+}
+.editor h2 {
+  margin: 0;
+}
+.editor p {
+  color: #7b6874;
+  line-height: 1.6;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.editor label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.editor input,
+.editor select,
+.editor textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e6dbe1;
+  border-radius: 10px;
+  background: #fff;
+  color: #352330;
+  font: inherit;
+}
+.editor textarea {
+  min-height: 80px;
+}
+.preview {
+  background: linear-gradient(120deg, #fff8fb, #ffe5ef);
+  border: 1px solid #f4d7e4;
+  padding: 24px;
+  border-radius: 18px;
+  color: #ae2059;
+}
+.preview small {
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.preview h3 {
+  margin: 12px 0;
+}
+.preview strong {
+  font-size: 25px;
+}
+.editor pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  background: #faf7f9;
+  padding: 16px;
+  border-radius: 12px;
+  max-height: 400px;
+  overflow: auto;
+}
+.event {
+  border-top: 1px solid #eee;
+  padding-top: 16px;
+}
+.event small {
+  color: #7b6874;
+}
+.order {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #f0e0e8;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  color: #432838;
+}
+.order small {
+  display: block;
+  margin-top: 6px;
+  color: #8c7180;
+  overflow-wrap: anywhere;
+}
+.order strong {
+  font-size: 15px;
+}
+.info {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0;
+}
+.info > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 150px) 1fr;
+  gap: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f5eaf0;
+}
+.info dt {
+  color: #947487;
+  font-size: 12px;
+}
+.info dd {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  color: #432838;
+}

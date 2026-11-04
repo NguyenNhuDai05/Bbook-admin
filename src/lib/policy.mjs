@@ -1,6 +1,19 @@
 const guid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules = [
+  ["GET", /^admin\/plans(?:\/[a-z0-9_]{3,64})?$/],
+  ["POST", /^admin\/plans$/],
+  ["PUT", /^admin\/plans\/[a-z0-9_]{3,64}$/],
+  ["DELETE", /^admin\/plans\/[a-z0-9_]{3,64}$/],
+  ["GET", /^admin\/commerce\/orders$/],
+  ["GET", new RegExp(`^admin/commerce/orders/(Customer|MUA)/${guid}$`)],
+  [
+    "POST",
+    new RegExp(`^admin/commerce/orders/(Customer|MUA)/${guid}/resolve$`),
+  ],
+  ["GET", /^admin\/mua-promotions$/],
+  ["GET", new RegExp(`^admin/mua-promotions/${guid}/portfolio$`)],
+  ["PUT", new RegExp(`^admin/mua-promotions/${guid}$`)],
   ["GET", /^makeup-catalog$/],
   ["GET", /^admin\/makeup-styles\/[1-9]\d*\/usage$/],
   ["POST", /^admin\/makeup-styles\/[1-9]\d*\/(archive|review)$/],
