@@ -47,12 +47,14 @@ import { TransactionsPage, TransactionPage } from "./transactions-page";
 import { AdminContentLayout, isAdminListRoute } from "./admin-content-layout";
 import { SubscriptionPlans } from "./subscription-plans";
 import { MuaPromotions } from "./mua-promotions";
+import { Outcome3Page } from "@/features/outcome3/outcome3-page";
 import referenceCss from "./admin-reference.module.css";
 const groups = [
   {
     label: "",
     items: [
       { key: "", label: "Tổng quan", icon: LayoutDashboard },
+      { key: "outcome-3", label: "Outcome 3", icon: LayoutDashboard },
       { key: "analytics", label: "Website Analytics", icon: Activity },
     ],
   },
@@ -151,6 +153,7 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
   }
   let page;
   if (key === "") page = <Dashboard {...props} />;
+  else if (key === "outcome-3" && !id) page = <Outcome3Page />;
   else if (key === "analytics" && !id) page = <WebsiteAnalytics />;
   else if (key === "verification" && id)
     page = <VerificationDetail {...props} id={id} />;
