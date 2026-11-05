@@ -172,20 +172,36 @@ function DailyChart({
     </div>
   );
 }
-export function RevenueChart({ data }: { data: DashboardData }) {
+export function RevenueChart({
+  data,
+  demo = false,
+}: {
+  data: DashboardData;
+  demo?: boolean;
+}) {
   return (
     <section className={s.card}>
       <div className={s.heading}>
         <div>
           <h2>Doanh thu theo ngày</h2>
-          <p>Phí nền tảng ghi nhận khi booking hoàn thành · VND</p>
+          <p>
+            {demo
+              ? "Phí booking hoàn thành + doanh thu gói mô phỏng · VND"
+              : "Phí nền tảng ghi nhận khi booking hoàn thành · VND"}
+          </p>
         </div>
       </div>
       <DailyChart data={data} metric="revenue" line />
     </section>
   );
 }
-export function NewUsersChart({ data }: { data: DashboardData }) {
+export function NewUsersChart({
+  data,
+  customersOnly = false,
+}: {
+  data: DashboardData;
+  customersOnly?: boolean;
+}) {
   const [tab, setTab] = useState<"newUsers" | "newMuas">("newUsers");
   return (
     <section className={s.card}>
@@ -213,7 +229,11 @@ export function NewUsersChart({ data }: { data: DashboardData }) {
             key={key}
             onClick={() => setTab(key)}
           >
-            {key === "newUsers" ? "Người dùng mới" : "Makeup Artist mới"}
+            {key === "newUsers"
+              ? customersOnly
+                ? "Customer mới"
+                : "Người dùng mới"
+              : "Makeup Artist mới"}
           </button>
         ))}
       </div>
@@ -222,7 +242,21 @@ export function NewUsersChart({ data }: { data: DashboardData }) {
         role="tabpanel"
         aria-labelledby={`chart-tab-${tab}`}
       >
-        <DailyChart key={tab} data={data} metric={tab} />
+        <DailyChart
+          key={tab}
+          data={
+            customersOnly
+              ? {
+                  ...data,
+                  daily: data.daily.map((row) => ({
+                    ...row,
+                    newUsers: row.newUsers - row.newMuas,
+                  })),
+                }
+              : data
+          }
+          metric={tab}
+        />
       </div>
     </section>
   );

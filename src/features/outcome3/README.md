@@ -1,36 +1,55 @@
-# Outcome 3: demo service reviews
+# Outcome 3 — reuse the production dashboard UI
 
-Route: `/outcome-3`, within the existing authenticated administrator catch-all route.
-Default mode is REAL. DEMO and COMPARE visibly label simulated records and do not
-merge them into actual business results. No fixtures are sent to an API.
+`/outcome-3` renders the same `OperationsDashboard` as `/`, with `demo` enabled.
+There is one dashboard layout, one set of KPI markup, one daily table, and the
+existing `RevenueChart`, `NewUsersChart`, `ServiceReviews`, and booking-status
+section. No duplicate report route, REAL/COMPARE switch or parallel dashboard UI
+remains. The Outcome 3 sidebar entry and existing administrator authorization stay
+in place.
 
-`demo.mjs` holds deterministic users, completed bookings, successful transactions
-and exactly 16 reviews. The shared review selector drives the average, rating
-distribution, low-rating count, recent list and daily statistics. The official
-period is 29 October–4 November 2026 in UTC+7. Reviews cover all seven days and
-follow their corresponding booking completion times.
+`dashboard-adapter.mjs` maps static records to the existing `DashboardData` view
+model. Production continues to consume its API view model unchanged. Lifetime
+values cover all fixture records; period values follow the selected calendar
+range. Registrations use createdAt, payments use confirmedAt, bookings use
+createdAt for new/status metrics and completedAt for completion/revenue, reviews
+use createdAt. Date boundaries are Vietnamese calendar dates (UTC+7).
 
-Expected full-period values: 32 customers, 7 MUA, 39 users, 17 unique paid users,
-18 successful transactions, 16 completed bookings and 16 reviews. Ratings:
-10 five-star, 5 four-star, 1 three-star, no one- or two-star records. The computed
-average is 4.5625, displayed with two Vietnamese decimal places.
+Full-period demo totals (29 October–4 November 2026):
 
-Demo revenue: 1,120,000 VND booking platform fees plus 150,000 VND Visibility
-payments = 1,270,000 VND. Booking fee recognition follows the existing backend
-dashboard's completed-booking PlatformFeeAmount approach. Deposits are not added
-to platform revenue. This is a demonstration calculation, not audited real revenue.
+- 32 customers, 7 MUA, 39 users.
+- 17 unique paid users: 15 customers and 2 MUA.
+- 18 successful transactions: 16 deposits and 2 Visibility purchases.
+- 16 completed bookings and 16 reviews covering all seven days.
+- Ratings: ten 5-star, five 4-star, one 3-star; no ratings below 3.
+- Computed average: 4.5625; display: 4,56 / 5.
+- Booking platform fees: 1,120,000 VND; Visibility: 150,000 VND.
+- Platform revenue: 1,270,000 VND. Deposit remains 30%, booking fee 8%.
 
-REAL reads the existing dashboard and reviews APIs. Refresh fetches current API
-results for the selected dates; later payments require selecting their date range.
-No automatic polling or webhook changes are introduced. The existing REAL review
-presentation is preserved. REAL unique paid users and the complete original
-Outcome 3 feature specification are outside this service-review update: the
-existing dashboard response does not expose unique paid users. No synthetic
-fallback is used on API errors.
+The demo customer chart sums to 32; its MUA tab sums to 7. New-user KPI/table
+retain the dashboard's definition including both roles (39). Charts and daily
+rows aggregate the same records, including zero days when the filter extends
+outside the fixture window. Lifetime totals do not change with the date filter.
+Demo has no comparison period, so the UI says “Chưa có dữ liệu so sánh”.
+
+A sticky simulation banner remains visible. Demo refresh recalculates local data
+and resets review filters. Review filters, pagination and detail modal read local
+records; disabled resource queries do not call reporting APIs. Transaction links
+are disabled. The operational queue is an explicitly unavailable demo placeholder,
+with no real counts and no processing actions. The ordinary authenticated admin
+shell can still read its own work-summary/sidebar data outside the demo report.
+
+Production keeps its existing queries, refresh invalidation, date controls,
+navigation, error handling and rating precision. No backend, API contract, Android,
+payOS, entitlements, database or migrations are changed. No deployment is performed.
 
 Verification: `npm run typecheck`, `npm test`, `npm run lint`, `npm run build`.
-Before release, check the authenticated page in all three modes on desktop and
-tablet, verify date filtering and refresh against a test backend, and confirm
-that production results remain unchanged. This change does not deploy, migrate
-or write to production. Rollback removes the Outcome 3 import, menu and route
-branch in admin-app.tsx, plus this feature directory and outcome3.test.mjs.
+UI tests render the real shared components with React, check API isolation,
+refresh/navigation handlers, date and rating filters, local review details, charts,
+seven table rows, and production behavior with a mocked API response. These are
+not a live production API or end-to-end payment test.
+
+Deployment: review the diff, pass the checks above, visually compare `/` and
+`/outcome-3` in an authenticated staging Admin session at desktop/tablet widths,
+then deploy the Admin using the existing hosting process. No backend deployment
+or migration is needed. Rollback restores the previous Admin release or reverts
+this rework commit; no data rollback is necessary.

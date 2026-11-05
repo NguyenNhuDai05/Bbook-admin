@@ -25,7 +25,7 @@ export const users = [
     id: id("MUA", i),
     role: "MUA",
     displayName: `MUA mô phỏng ${i + 1}`,
-    createdAt: at(0, "07:00"),
+    createdAt: at(i, "07:00"),
     isActive: true,
     isDeleted: false,
     source: "DEMO",
@@ -37,7 +37,7 @@ export const bookings = Array.from({ length: 16 }, (_, i) => {
   return {
     bookingId: id("BOOKING", i),
     customerId: id("CUSTOMER", i % 15),
-    muaId: id("MUA", i % 7),
+    muaId: id("MUA", day),
     bookingTotal,
     depositAmount: bookingTotal * 0.3,
     platformFee: bookingTotal * 0.08,

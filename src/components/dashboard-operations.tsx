@@ -33,6 +33,15 @@ import { Pagination } from "./ui";
 import s from "./dashboard.module.css";
 import { RevenueChart, NewUsersChart } from "./dashboard-charts";
 import { ServiceReviews } from "./dashboard-reviews";
+import {
+  demoDashboard,
+  demoReviewDetails,
+} from "@/features/outcome3/dashboard-adapter.mjs";
+import {
+  demoReport,
+  days as demoDays,
+  demoLabel,
+} from "@/features/outcome3/demo.mjs";
 import { useRouter } from "next/navigation";
 
 const num = (value: number) => value.toLocaleString("vi-VN");
@@ -193,16 +202,37 @@ function WorkQueue() {
     </section>
   );
 }
-export function OperationsDashboard() {
-  const [preset, setPreset] = useState("week");
-  const [range, setRange] = useState(() => presetRange("week"));
+export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
+  const [preset, setPreset] = useState(demo ? "custom" : "week");
+  const [range, setRange] = useState(() =>
+    demo ? { from: demoDays[0], to: demoDays[6] } : presetRange("week"),
+  );
   const [draft, setDraft] = useState(range);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const resource = useResource(adminService.dashboard(range.from, range.to), {
-    retainData: true,
-  });
+  const live = useResource<DashboardData>(
+    demo
+      ? {
+          key: "demo:dashboard",
+          enabled: false,
+          load: async () => demoDashboard(range.from, range.to),
+        }
+      : adminService.dashboard(range.from, range.to),
+    {
+      retainData: true,
+    },
+  );
+  const [revision, setRevision] = useState(0);
+  const resource = demo
+    ? {
+        data: demoDashboard(range.from, range.to),
+        loading: false,
+        error: "",
+        reload: () => setRevision((v) => v + 1),
+      }
+    : live;
   const data = resource.data;
+  const demoStats = demo ? demoReport(range.from, range.to) : undefined;
   const router = useRouter();
   const days = (Date.parse(range.to) - Date.parse(range.from)) / 86400000 + 1;
   const daily = data
@@ -225,10 +255,11 @@ export function OperationsDashboard() {
     <div className={s.dashboard}>
       <header className={s.header}>
         <div>
-          <h1>Tổng quan</h1>
+          <h1>{demo ? "Outcome 3 — Tổng quan kết quả" : "Tổng quan"}</h1>
           <p>
-            Theo dõi hoạt động kinh doanh, vận hành và trải nghiệm người dùng
-            B-Book
+            {demo
+              ? "Dữ liệu mô phỏng hoạt động BBook từ 29/10/2026 đến 04/11/2026"
+              : "Theo dõi hoạt động kinh doanh, vận hành và trải nghiệm người dùng B-Book"}
           </p>
         </div>
         <div className={s.actions}>
@@ -267,7 +298,12 @@ export function OperationsDashboard() {
             className="button secondary"
             disabled={resource.loading}
             onClick={() =>
-              invalidateResources(["admin:dashboard:", "admin:work-summary"])
+              demo
+                ? resource.reload()
+                : invalidateResources([
+                    "admin:dashboard:",
+                    "admin:work-summary",
+                  ])
             }
           >
             <RefreshCw size={15} />
@@ -275,6 +311,12 @@ export function OperationsDashboard() {
           </button>
         </div>
       </header>
+      {demo && (
+        <div className={s.demoBanner} role="note">
+          <strong>{demoLabel}</strong>
+          <span>DỮ LIỆU MÔ PHỎNG — KHÔNG PHẢI GIAO DỊCH THỰC TẾ</span>
+        </div>
+      )}
       {data && (
         <>
           <div className={s.summaryHeading}>
@@ -294,7 +336,9 @@ export function OperationsDashboard() {
               </div>
               <strong>{num(data.users.total)}</strong>
               <span className={s.delta}>
-                Tài khoản hiện tại, gồm Customer và MUA
+                {demo
+                  ? `${num(data.users.customers)} Customer · ${num(data.users.muas)} MUA`
+                  : "Tài khoản hiện tại, gồm Customer và MUA"}
               </span>
             </section>
             <section className={s.kpi}>
@@ -334,13 +378,16 @@ export function OperationsDashboard() {
                 Điểm bình quân:{" "}
                 {data.lifetime.averageRating === null
                   ? "—"
-                  : `${data.lifetime.averageRating.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} / 5`}
+                  : `${data.lifetime.averageRating.toLocaleString("vi-VN", { minimumFractionDigits: demo ? 2 : 0, maximumFractionDigits: demo ? 2 : 1 })} / 5`}
               </span>
             </section>
             <button
               type="button"
               className={`${s.kpi} ${s.clickableKpi}`}
-              onClick={() => router.push("/transactions?scope=all")}
+              disabled={demo}
+              onClick={() => {
+                if (!demo) router.push("/transactions?scope=all");
+              }}
             >
               <div className={s.kpiLabel}>
                 <span className={s.icon}>
@@ -350,7 +397,13 @@ export function OperationsDashboard() {
               </div>
               <strong>{num(data.lifetime.successfulTransactions)}</strong>
               <span className={s.delta}>
-                Xem lịch sử và chi tiết <ChevronRight size={14} />
+                {demo ? (
+                  "Giao dịch mô phỏng · Không mở dữ liệu thật"
+                ) : (
+                  <>
+                    Xem lịch sử và chi tiết <ChevronRight size={14} />
+                  </>
+                )}
               </span>
             </button>
           </div>
@@ -454,11 +507,13 @@ export function OperationsDashboard() {
         <>
           <div className={s.kpis}>
             {metrics.map((item) => {
-              const delta = comparison(
-                data.current[item.key],
-                data.previous[item.key],
-                days,
-              );
+              const delta = demo
+                ? { direction: "neutral", text: "Chưa có dữ liệu so sánh" }
+                : comparison(
+                    data.current[item.key],
+                    data.previous[item.key],
+                    days,
+                  );
               return (
                 <section className={s.kpi} key={item.key}>
                   <div className={s.kpiLabel}>
@@ -486,7 +541,23 @@ export function OperationsDashboard() {
               );
             })}
           </div>
-          <div className={`${s.kpis} ${s.reviewKpis}`}>
+          <div
+            className={`${s.kpis} ${s.reviewKpis} ${demo ? s.demoReviewKpis : ""}`}
+          >
+            {demoStats && (
+              <section className={s.kpi}>
+                <div className={s.kpiLabel}>
+                  <span className={s.icon}>
+                    <Users size={16} />
+                  </span>
+                  Paid Users
+                </div>
+                <strong>{num(demoStats.paidUsers)}</strong>
+                <span className={s.delta}>
+                  Người thanh toán duy nhất trong kỳ
+                </span>
+              </section>
+            )}
             <section className={s.kpi}>
               <div className={s.kpiLabel}>
                 <span className={s.icon}>
@@ -509,7 +580,7 @@ export function OperationsDashboard() {
               <strong>
                 {data.serviceReviews.averageRating === null
                   ? "—"
-                  : `${data.serviceReviews.averageRating.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} / 5`}
+                  : `${data.serviceReviews.averageRating.toLocaleString("vi-VN", { minimumFractionDigits: demo ? 2 : 0, maximumFractionDigits: demo ? 2 : 1 })} / 5`}
               </strong>
               <span className={s.delta}>
                 {data.serviceReviews.total
@@ -528,31 +599,57 @@ export function OperationsDashboard() {
               <span className={s.delta}>
                 <button
                   className="text-button"
+                  disabled={demo}
                   onClick={() =>
+                    !demo &&
                     router.push(
                       `/transactions?from=${range.from}&to=${range.to}`,
                     )
                   }
                 >
-                  Xem lịch sử trong kỳ <ChevronRight size={14} />
+                  {demo ? (
+                    "Giao dịch mô phỏng trong kỳ"
+                  ) : (
+                    <>
+                      Xem lịch sử trong kỳ <ChevronRight size={14} />
+                    </>
+                  )}
                 </button>
               </span>
             </section>
           </div>
           <div className={s.analytics}>
-            <RevenueChart data={data} />
-            <NewUsersChart data={data} />
+            <RevenueChart data={data} demo={demo} />
+            <NewUsersChart data={data} customersOnly={demo} />
           </div>
         </>
       )}
       <div className={s.operations}>
         <div className={s.operationsColumn}>
-          <WorkQueue />
+          {demo ? (
+            <section className={s.card} id="work-queue">
+              <div className={s.heading}>
+                <div>
+                  <h2>Công việc cần xử lý</h2>
+                  <p>DEMO — Không sử dụng hàng đợi production</p>
+                </div>
+              </div>
+              <p className={s.empty}>
+                Không mô phỏng công việc vận hành. Các thao tác xử lý không khả
+                dụng.
+              </p>
+            </section>
+          ) : (
+            <WorkQueue />
+          )}
           {data && <BookingBreakdown data={data} />}
         </div>
         {data ? (
           <ServiceReviews
-            key={`${range.from}:${range.to}`}
+            key={`${range.from}:${range.to}:${demo ? revision : "real"}`}
+            demoReviews={
+              demo ? demoReviewDetails(range.from, range.to) : undefined
+            }
             data={data}
             from={range.from}
             to={range.to}
@@ -576,7 +673,7 @@ export function OperationsDashboard() {
             <span>{num(data.users.locked)} bị khóa</span>
             <small>Tổng hiện tại</small>
           </section>
-          <details className={s.daily}>
+          <details className={s.daily} open={demo ? true : undefined}>
             <summary>
               Số liệu từng ngày <span>Ngày mới nhất trước</span>
             </summary>
@@ -589,6 +686,13 @@ export function OperationsDashboard() {
                     <th>Doanh thu nền tảng</th>
                     <th>Người dùng mới</th>
                     <th>MUA mới</th>
+                    {demo && (
+                      <>
+                        <th>Paid users mới</th>
+                        <th>Giao dịch thành công</th>
+                        <th>Reviews</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -599,6 +703,19 @@ export function OperationsDashboard() {
                       <td>{money(x.revenue)}</td>
                       <td>{num(x.newUsers)}</td>
                       <td>{num(x.newMuas)}</td>
+                      {demo &&
+                        (() => {
+                          const row = demoStats?.daily.find(
+                            (d) => d.date === x.date,
+                          );
+                          return (
+                            <>
+                              <td>{num(row?.paidUsers ?? 0)}</td>
+                              <td>{num(row?.transactions ?? 0)}</td>
+                              <td>{num(row?.reviews ?? 0)}</td>
+                            </>
+                          );
+                        })()}
                     </tr>
                   ))}
                 </tbody>
