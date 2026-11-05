@@ -10,6 +10,48 @@ import {
   demoReport,
 } from "../src/features/outcome3/demo.mjs";
 
+test("all fixture events stay in the official UTC+7 window with valid payment references", () => {
+  const start = Date.parse("2026-10-29T00:00:00+07:00");
+  const end = Date.parse("2026-11-05T00:00:00+07:00");
+  for (const record of [...users, ...bookings, ...transactions, ...reviews]) {
+    for (const [key, value] of Object.entries(record)) {
+      if (!key.endsWith("At")) continue;
+      assert.ok(
+        Date.parse(value) >= start && Date.parse(value) < end,
+        `${key}: ${value}`,
+      );
+    }
+  }
+  assert.equal(new Set(users.map((u) => u.id)).size, 39);
+  assert.equal(new Set(transactions.map((t) => t.transactionId)).size, 18);
+  assert.equal(new Set(bookings.map((b) => b.bookingId)).size, 16);
+  const paid = new Set(transactions.map((t) => t.userId));
+  assert.equal(
+    users.filter((u) => paid.has(u.id) && u.role === "CUSTOMER").length,
+    15,
+  );
+  assert.equal(
+    users.filter((u) => paid.has(u.id) && u.role === "MUA").length,
+    2,
+  );
+  for (const payment of transactions) {
+    const user = users.find((u) => u.id === payment.userId);
+    assert.ok(user);
+    assert.ok(Date.parse(user.createdAt) <= Date.parse(payment.createdAt));
+    assert.ok(Date.parse(payment.createdAt) <= Date.parse(payment.confirmedAt));
+    if (payment.bookingId) {
+      const booking = bookings.find((b) => b.bookingId === payment.bookingId);
+      assert.ok(booking);
+      assert.equal(payment.userId, booking.customerId);
+      assert.equal(payment.amount, booking.depositAmount);
+      assert.equal(payment.confirmedAt, booking.paymentConfirmedAt);
+    } else {
+      assert.equal(payment.transactionType, "VISIBILITY");
+      assert.equal(payment.amount, 75000);
+    }
+  }
+});
+
 test("exact demo review distribution and computed average", () => {
   const result = aggregateReviews(reviews);
   assert.equal(result.total, 16);

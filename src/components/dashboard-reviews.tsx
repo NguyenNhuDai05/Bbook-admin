@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Star, Image as ImageIcon } from "lucide-react";
 import { useResource } from "@/lib/client";
 import { adminService } from "@/services/admin-service";
-import type { DashboardData } from "@/lib/dashboard";
+import type { DashboardData, DashboardReviewDetail } from "@/lib/dashboard";
 import { money, shortId, statusLabels } from "@/lib/format";
 import { Modal, Pagination, DocumentView, State } from "./ui";
 import s from "./dashboard.module.css";
@@ -14,9 +14,27 @@ const timestamp = (date: string) =>
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(date));
-function ReviewDetail({ id, onClose }: { id: string; onClose: () => void }) {
-  const resource = useResource(adminService.dashboardReview(id));
-  const review = resource.data;
+function ReviewDetail({
+  id,
+  onClose,
+  demoReview,
+  localOnly = false,
+}: {
+  id: string;
+  onClose: () => void;
+  demoReview?: DashboardReviewDetail;
+  localOnly?: boolean;
+}) {
+  const resource = useResource(
+    localOnly
+      ? {
+          key: `demo:review:${id}`,
+          enabled: false,
+          load: async () => demoReview,
+        }
+      : adminService.dashboardReview(id),
+  );
+  const review = demoReview ?? resource.data;
   return (
     <Modal title="Chi tiết đánh giá dịch vụ" onClose={onClose} wide>
       {!review ? (
@@ -96,18 +114,40 @@ export function ServiceReviews({
   data,
   from,
   to,
+  demoReviews,
 }: {
   data: DashboardData;
   from: string;
   to: string;
+  demoReviews?: DashboardReviewDetail[];
 }) {
   const reviews = data.serviceReviews;
   const [rating, setRating] = useState(0);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
-  const resource = useResource(
-    adminService.dashboardReviews(from, to, rating, page),
+  const live = useResource(
+    demoReviews
+      ? {
+          key: "demo:reviews",
+          enabled: false,
+          load: async () => ({ items: [], total: 0, page: 1, pageSize: 20 }),
+        }
+      : adminService.dashboardReviews(from, to, rating, page),
   );
+  const filtered = demoReviews?.filter((r) => !rating || r.rating === rating);
+  const resource = filtered
+    ? {
+        loading: false,
+        error: "",
+        reload: () => {},
+        data: {
+          items: filtered
+            .slice((page - 1) * 20, page * 20)
+            .map((r) => ({ ...r, hasImage: false })),
+          total: filtered.length,
+        },
+      }
+    : live;
   const chooseRating = (value: number) => {
     setRating(value === rating ? 0 : value);
     setPage(1);
@@ -127,7 +167,8 @@ export function ServiceReviews({
             {reviews.averageRating === null
               ? "—"
               : reviews.averageRating.toLocaleString("vi-VN", {
-                  maximumFractionDigits: 1,
+                  minimumFractionDigits: demoReviews ? 2 : 0,
+                  maximumFractionDigits: demoReviews ? 2 : 1,
                 })}
             <small> / 5</small>
           </strong>
@@ -242,6 +283,8 @@ export function ServiceReviews({
         <ReviewDetail
           key={selected}
           id={selected}
+          demoReview={demoReviews?.find((r) => r.reviewId === selected)}
+          localOnly={demoReviews !== undefined}
           onClose={() => setSelected(null)}
         />
       )}
