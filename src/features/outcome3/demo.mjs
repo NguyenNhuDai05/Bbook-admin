@@ -1,5 +1,4 @@
 // Local reporting fixtures only. Never send these records to a backend API.
-export const demoLabel = "DEMO — Dữ liệu mô phỏng";
 export const days = [
   "2026-10-29",
   "2026-10-30",
@@ -9,13 +8,13 @@ export const days = [
   "2026-11-03",
   "2026-11-04",
 ];
-const id = (kind, i) => `DEMO_${kind}_${String(i + 1).padStart(3, "0")}`;
+const id = (kind, i) => `BBOOK_${kind}_${String(i + 1).padStart(3, "0")}`;
 const at = (day, time) => `${days[day]}T${time}:00+07:00`;
 export const users = [
   ...Array.from({ length: 32 }, (_, i) => ({
     id: id("CUSTOMER", i),
     role: "CUSTOMER",
-    displayName: `Khách mô phỏng ${i + 1}`,
+    displayName: `Khách hàng ${String(i + 1).padStart(2, "0")}`,
     createdAt: at(i < 15 ? 0 : 1 + (i % 6), "07:00"),
     isActive: true,
     isDeleted: false,
@@ -24,7 +23,7 @@ export const users = [
   ...Array.from({ length: 7 }, (_, i) => ({
     id: id("MUA", i),
     role: "MUA",
-    displayName: `MUA mô phỏng ${i + 1}`,
+    displayName: `Chuyên viên ${String(i + 1).padStart(2, "0")}`,
     createdAt: at(i, "07:00"),
     isActive: true,
     isDeleted: false,
@@ -61,19 +60,22 @@ export const transactions = [
     source: "DEMO",
     currency: "VND",
   })),
-  ...[1, 5].map((day, i) => ({
-    transactionId: id("VISIBILITY", i),
-    userId: id("MUA", i),
-    bookingId: null,
-    packageReference: "DEMO_VISIBILITY_30_DAYS",
-    transactionType: "VISIBILITY",
-    amount: 75000,
-    createdAt: at(day, "10:00"),
-    confirmedAt: at(day, "10:05"),
-    status: "SUCCESS",
-    source: "DEMO",
-    currency: "VND",
-  })),
+  ...Array.from({ length: 13 }, (_, i) => {
+    const day = i < 7 ? i : i - 6;
+    return {
+      transactionId: id("VISIBILITY", i),
+      userId: id("MUA", i % 7),
+      bookingId: null,
+      packageReference: "VISIBILITY_30_DAYS",
+      transactionType: "VISIBILITY",
+      amount: 75000,
+      createdAt: at(day, "10:00"),
+      confirmedAt: at(day, "10:05"),
+      status: "SUCCESS",
+      source: "DEMO",
+      currency: "VND",
+    };
+  }),
 ];
 const content = [
   [

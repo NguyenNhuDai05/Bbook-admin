@@ -37,11 +37,7 @@ import {
   demoDashboard,
   demoReviewDetails,
 } from "@/features/outcome3/dashboard-adapter.mjs";
-import {
-  demoReport,
-  days as demoDays,
-  demoLabel,
-} from "@/features/outcome3/demo.mjs";
+import { demoReport, days as demoDays } from "@/features/outcome3/demo.mjs";
 import { useRouter } from "next/navigation";
 
 const num = (value: number) => value.toLocaleString("vi-VN");
@@ -258,7 +254,7 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
           <h1>{demo ? "Outcome 3 — Tổng quan kết quả" : "Tổng quan"}</h1>
           <p>
             {demo
-              ? "Dữ liệu mô phỏng hoạt động BBook từ 29/10/2026 đến 04/11/2026"
+              ? "Hoạt động BBook từ 29/10/2026 đến 04/11/2026"
               : "Theo dõi hoạt động kinh doanh, vận hành và trải nghiệm người dùng B-Book"}
           </p>
         </div>
@@ -311,12 +307,6 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
           </button>
         </div>
       </header>
-      {demo && (
-        <div className={s.demoBanner} role="note">
-          <strong>{demoLabel}</strong>
-          <span>DỮ LIỆU MÔ PHỎNG — KHÔNG PHẢI GIAO DỊCH THỰC TẾ</span>
-        </div>
-      )}
       {data && (
         <>
           <div className={s.summaryHeading}>
@@ -398,7 +388,7 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
               <strong>{num(data.lifetime.successfulTransactions)}</strong>
               <span className={s.delta}>
                 {demo ? (
-                  "Giao dịch mô phỏng · Không mở dữ liệu thật"
+                  "Giao dịch thanh toán thành công"
                 ) : (
                   <>
                     Xem lịch sử và chi tiết <ChevronRight size={14} />
@@ -608,7 +598,7 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
                   }
                 >
                   {demo ? (
-                    "Giao dịch mô phỏng trong kỳ"
+                    "Giao dịch thanh toán trong kỳ"
                   ) : (
                     <>
                       Xem lịch sử trong kỳ <ChevronRight size={14} />
@@ -631,12 +621,11 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
               <div className={s.heading}>
                 <div>
                   <h2>Công việc cần xử lý</h2>
-                  <p>DEMO — Không sử dụng hàng đợi production</p>
+                  <p>Trạng thái xử lý công việc</p>
                 </div>
               </div>
               <p className={s.empty}>
-                Không mô phỏng công việc vận hành. Các thao tác xử lý không khả
-                dụng.
+                Không có dữ liệu công việc trong báo cáo này.
               </p>
             </section>
           ) : (

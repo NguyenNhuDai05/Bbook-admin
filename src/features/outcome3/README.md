@@ -17,13 +17,13 @@ use createdAt. Date boundaries are Vietnamese calendar dates (UTC+7).
 Full-period demo totals (29 October–4 November 2026):
 
 - 32 customers, 7 MUA, 39 users.
-- 17 unique paid users: 15 customers and 2 MUA.
-- 18 successful transactions: 16 deposits and 2 Visibility purchases.
+- 22 unique paid users: 15 customers and 7 MUA.
+- 29 successful transactions: 16 deposits and 13 Visibility purchases.
 - 16 completed bookings and 16 reviews covering all seven days.
 - Ratings: ten 5-star, five 4-star, one 3-star; no ratings below 3.
 - Computed average: 4.5625; display: 4,56 / 5.
-- Booking platform fees: 1,120,000 VND; Visibility: 150,000 VND.
-- Platform revenue: 1,270,000 VND. Deposit remains 30%, booking fee 8%.
+- Booking platform fees: 1,120,000 VND; Visibility: 975,000 VND.
+- Platform revenue: 2,095,000 VND. Deposit remains 30%, booking fee 8%.
 
 The demo customer chart sums to 32; its MUA tab sums to 7. New-user KPI/table
 retain the dashboard's definition including both roles (39). Charts and daily
@@ -31,7 +31,8 @@ rows aggregate the same records, including zero days when the filter extends
 outside the fixture window. Lifetime totals do not change with the date filter.
 Demo has no comparison period, so the UI says “Chưa có dữ liệu so sánh”.
 
-A sticky simulation banner remains visible. Demo refresh recalculates local data
+The report uses neutral presentation labels without a simulation banner. The
+records remain local fixtures, not persisted payments. Refresh recalculates local data
 and resets review filters. Review filters, pagination and detail modal read local
 records; disabled resource queries do not call reporting APIs. Transaction links
 are disabled. The operational queue is an explicitly unavailable demo placeholder,

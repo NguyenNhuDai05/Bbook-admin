@@ -23,7 +23,8 @@ test("all fixture events stay in the official UTC+7 window with valid payment re
     }
   }
   assert.equal(new Set(users.map((u) => u.id)).size, 39);
-  assert.equal(new Set(transactions.map((t) => t.transactionId)).size, 18);
+  assert.equal(transactions.length, 29);
+  assert.equal(new Set(transactions.map((t) => t.transactionId)).size, 29);
   assert.equal(new Set(bookings.map((b) => b.bookingId)).size, 16);
   const paid = new Set(transactions.map((t) => t.userId));
   assert.equal(
@@ -32,7 +33,7 @@ test("all fixture events stay in the official UTC+7 window with valid payment re
   );
   assert.equal(
     users.filter((u) => paid.has(u.id) && u.role === "MUA").length,
-    2,
+    7,
   );
   for (const payment of transactions) {
     const user = users.find((u) => u.id === payment.userId);
@@ -134,12 +135,12 @@ test("other Outcome 3 targets and relationships remain consistent", () => {
       report.successfulTransactions,
       report.completedBookings,
     ],
-    [32, 7, 39, 17, 18, 16],
+    [32, 7, 39, 22, 29, 16],
   );
-  assert.equal(report.visibilityRevenue, 150000);
+  assert.equal(report.visibilityRevenue, 975000);
   assert.equal(
     report.revenue,
-    bookings.reduce((sum, b) => sum + b.platformFee, 0) + 150000,
+    bookings.reduce((sum, b) => sum + b.platformFee, 0) + 975000,
   );
   assert.equal(
     report.daily.reduce((sum, d) => sum + d.revenue, 0),
@@ -147,7 +148,7 @@ test("other Outcome 3 targets and relationships remain consistent", () => {
   );
   assert.equal(
     report.daily.reduce((sum, d) => sum + d.paidUsers, 0),
-    17,
+    22,
   );
   for (const records of [users, transactions, bookings]) {
     assert.ok(records.every((r) => r.source === "DEMO"));
