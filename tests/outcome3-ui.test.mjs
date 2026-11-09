@@ -198,7 +198,7 @@ test("Outcome 3 renders the existing five-card dashboard, charts, review analyti
   const { html, apiCalls, queries } = renderDemo();
   for (const text of [
     "Outcome 3 — Tổng quan kết quả",
-    "DEMO — Dữ liệu mô phỏng",
+    "Giao dịch thanh toán thành công",
     "32 Customer · 7 MUA",
     "Tổng tích lũy",
     "Thống kê theo kỳ",
@@ -211,10 +211,15 @@ test("Outcome 3 renders the existing five-card dashboard, charts, review analyti
     "Số liệu từng ngày",
     "Paid Users",
     "4,56 / 5",
-    "1.270.000",
+    "2.095.000",
     "Chưa có dữ liệu so sánh",
   ])
     assert.ok(html.includes(text), text);
+  assert.doesNotMatch(
+    html.replace(/<[^>]*>/g, ""),
+    /demo|mô phỏng|simulation/i,
+  );
+  assert.match(html, /<strong>29<\/strong>/);
   assert.match(html, /class="kpis lifetimeKpis"/);
   assert.match(html, /class="linePlot"/);
   assert.match(html, /class="ratingDistribution"/);
@@ -251,9 +256,10 @@ test("demo date filtering, empty ranges, rating filter and local review detail s
   assert.match(empty.html, /Không có đánh giá/);
   assert.match(empty.html, /05\/11\/2026/);
   assert.equal(empty.apiCalls.length, 0);
-  const detail = renderDemo({ selected: "DEMO_REVIEW_001" });
+  const detail = renderDemo({ selected: "BBOOK_REVIEW_001" });
   assert.match(detail.html, /Chi tiết đánh giá dịch vụ/);
-  assert.match(detail.html, /DEMO_BOOKING_001/);
+  assert.match(detail.html, /BBOOK_BOOKING_001/);
+  assert.doesNotMatch(detail.html.replace(/<[^>]*>/g, ""), /demo|mô phỏng/i);
   assert.equal(detail.apiCalls.length, 0);
 });
 
@@ -372,5 +378,6 @@ test("demo adapter meets production view-model contract and reconciles chart and
   );
   assert.ok(data.daily.every((d) => d.newMuas === 1));
   assert.equal(data.daily.length, 7);
-  assert.equal(data.current.revenue, 1270000);
+  assert.equal(data.current.revenue, 2095000);
+  assert.equal(data.current.successfulTransactions, 29);
 });

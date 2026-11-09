@@ -186,7 +186,7 @@ export function RevenueChart({
           <h2>Doanh thu theo ngày</h2>
           <p>
             {demo
-              ? "Phí booking hoàn thành + doanh thu gói mô phỏng · VND"
+              ? "Phí booking hoàn thành + doanh thu gói · VND"
               : "Phí nền tảng ghi nhận khi booking hoàn thành · VND"}
           </p>
         </div>
