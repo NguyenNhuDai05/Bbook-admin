@@ -7,10 +7,10 @@ import { adminService as service } from "@/services/admin-service";
 import { date, shortId, waitHours } from "@/lib/format";
 import type { PageProps } from "./admin-app";
 import { Badge, PageTitle, Pagination, State } from "./ui";
-import { OperationsDashboard } from "./dashboard-operations";
+import { OverviewDashboard } from "./overview-dashboard";
 export function Dashboard(props: PageProps) {
   void props;
-  return <OperationsDashboard />;
+  return <OverviewDashboard />;
 }
 export function Person({
   item,

@@ -84,7 +84,7 @@ export const adminApi = {
     signal: AbortSignal,
   ) =>
     paged<DashboardReview>(
-      `admin/dashboard/reviews?${params({ from, to, page, pageSize: 20, ...(rating ? { rating } : {}) })}`,
+      `admin/dashboard/reviews?${params({ ...(from && to ? { from, to } : { all: "true" }), page, pageSize: 20, ...(rating ? { rating } : {}) })}`,
       ["reviewId", "bookingId", "rating", "createdAt", "hasImage"],
       signal,
     ),
@@ -119,7 +119,7 @@ export const adminApi = {
   dashboard: async (from: string, to: string, signal: AbortSignal) =>
     validateDashboard(
       await request<DashboardData>(
-        `admin/dashboard?${params({ from, to })}`,
+        `admin/dashboard?${params(from && to ? { from, to } : { all: "true" })}`,
         "GET",
         undefined,
         signal,
