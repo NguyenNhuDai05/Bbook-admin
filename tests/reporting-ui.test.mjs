@@ -10,31 +10,37 @@ import {
   readReportRange,
   reviewFilters,
   reviewHref,
+  boundedReportRange,
 } from "../src/lib/reporting-range.mjs";
 
-test("dashboard uses 30 inclusive Vietnam dates by default and keeps all-time totals independent of chart filters", () => {
+test("original dashboard retains its five lifetime cards and review panel, uses one bounded 30-day request and removes period KPIs", () => {
   const h = reportingHarness({
     trends: {
       ...fixture,
-      current: { totalBookings: 1 },
-      lifetime: { revenue: 1 },
+      current: { ...fixture.current, totalBookings: 1 },
     },
   });
   const html = h.render(
     "components/overview-dashboard.tsx",
     "OverviewDashboard",
   );
-  const [totals, trends] = h.calls.filter((q) => q.name === "dashboard");
-  assert.deepEqual(totals.args, ["", ""]);
+  const requests = h.calls.filter((q) => q.name === "dashboard");
+  assert.equal(requests.length, 1);
+  const [report] = requests;
   assert.equal(
-    (Date.parse(trends.args[1]) - Date.parse(trends.args[0])) / 86400000 + 1,
+    (Date.parse(report.args[1]) - Date.parse(report.args[0])) / 86400000 + 1,
     30,
   );
-  assert.match(html, /Thống kê tổng/);
+  assert.match(html, /Tổng tích lũy/);
   assert.match(html, /2\.460\.000/);
   assert.match(html, />46</);
   assert.doesNotMatch(html, /Thống kê theo kỳ|so với .*ngày trước|Outcome 3/);
-  assert.match(html, /href="\/reviews"/);
+  assert.match(html, /class="kpis lifetimeKpis"/);
+  assert.match(html, /class="operationsColumn"/);
+  assert.match(html, /class="card reviewCard"/);
+  assert.match(html, /Nguyễn Thảo Linh/);
+  assert.match(html, /Phạm Minh Thư/);
+  assert.match(html, /Số liệu từng ngày/);
   const other = reportingHarness({
     range: reportPreset("week", "2026-11-21"),
     trends: fixture,
@@ -42,10 +48,11 @@ test("dashboard uses 30 inclusive Vietnam dates by default and keeps all-time to
   other.render("components/overview-dashboard.tsx", "OverviewDashboard");
   assert.deepEqual(
     other.calls.filter((q) => q.name === "dashboard").map((q) => q.args),
-    [
-      ["", ""],
-      ["2026-11-15", "2026-11-21"],
-    ],
+    [["2026-11-15", "2026-11-21"]],
+  );
+  assert.deepEqual(
+    other.calls.find((q) => q.name === "dashboardReviews").args.slice(0, 2),
+    ["2026-11-15", "2026-11-21"],
   );
 });
 
@@ -55,17 +62,17 @@ test("unavailable totals never become zero and navigation no longer offers Outco
     route: [],
     user: { fullName: "Admin", email: "admin@example.org" },
   });
-  assert.match(html, /Không thể tải thống kê/);
+  assert.match(html, /Chưa tải được số liệu/);
   assert.doesNotMatch(html, /<strong>0<\/strong>|Outcome 3|outcome-3/);
   assert.match(html, /href="\/reviews"/);
 });
 
-test("review list uses real all-time pagination by default and supports empty and error states", () => {
+test("review list defaults to a supported 30-day range and retains pagination, empty and error states", () => {
   const h = reportingHarness();
   const html = h.render("components/reviews-page.tsx", "ReviewsPage");
   assert.deepEqual(h.calls.find((q) => q.name === "dashboardReviews").args, [
-    "",
-    "",
+    reportPreset("month").from,
+    reportPreset("month").to,
     0,
     1,
   ]);
@@ -74,7 +81,7 @@ test("review list uses real all-time pagination by default and supports empty an
   assert.match(html, /1–2 \/ 20/);
   assert.match(
     html,
-    /\/reviews\/11111111-2222-4333-8444-555555555555\?scope=all/,
+    /\/reviews\/11111111-2222-4333-8444-555555555555\?scope=month/,
   );
   assert.match(
     reportingHarness({ empty: true }).render(
@@ -154,7 +161,7 @@ test("range links preserve selected presets, reject malformed ranges and constra
   );
   assert.deepEqual(
     reviewFilters(new URLSearchParams("rating=-1&page=100001")).range,
-    reportPreset("all"),
+    reportPreset("month"),
   );
   assert.equal(reviewFilters(new URLSearchParams("rating=6&page=0")).rating, 0);
   assert.equal(
@@ -167,4 +174,25 @@ test("range links preserve selected presets, reject malformed ranges and constra
     }),
     reportPreset("month", "2026-11-21"),
   );
+});
+
+test("bounded report API dates never emit unsupported all=true and never silently accept a partial or oversized range", () => {
+  assert.deepEqual(boundedReportRange("", "", "2026-11-21"), {
+    from: "2026-10-23",
+    to: "2026-11-21",
+  });
+  assert.deepEqual(boundedReportRange("2026-10-10", "2026-11-18"), {
+    from: "2026-10-10",
+    to: "2026-11-18",
+  });
+  for (const pair of [
+    ["2026-11-01", ""],
+    ["", "2026-11-21"],
+    ["2026-02-31", "2026-03-05"],
+    ["2025-01-01", "2026-11-21"],
+  ])
+    assert.throws(() => boundedReportRange(...pair), /366/);
+  const migrated = reviewFilters(new URLSearchParams("scope=all"));
+  assert.equal(migrated.range.preset, "month");
+  assert.ok(migrated.range.from && migrated.range.to);
 });

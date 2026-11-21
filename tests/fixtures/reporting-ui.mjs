@@ -38,6 +38,8 @@ export const fixture = {
     total: 20,
     averageRating: 4.75,
     lowRatingCount: 1,
+    reviewedCompletedBookings: 20,
+    eligibleCompletedBookings: 28,
     distribution: [5, 4, 3, 2, 1].map((rating, i) => ({
       rating,
       count: [15, 3, 1, 1, 0][i],
@@ -276,6 +278,7 @@ export function reportingHarness(options = {}) {
         };
       const local = {
         "./dashboard-charts": "components/dashboard-charts.tsx",
+        "./dashboard-reviews": "components/dashboard-reviews.tsx",
         "./report-range": "components/report-range.tsx",
         "./overview-dashboard": "components/overview-dashboard.tsx",
         "./reviews-page": "components/reviews-page.tsx",

@@ -300,7 +300,6 @@ export function ReviewsPage({ id }: { id?: string }) {
             </label>
             <ReportRangeFilter
               value={range}
-              allowAll
               onChange={(next) => change({ range: next, page: 1 })}
             />
           </div>

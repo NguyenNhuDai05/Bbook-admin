@@ -9,6 +9,7 @@ import {
 } from "@/lib/dashboard";
 import { assertArray, assertPaged } from "@/lib/contracts.mjs";
 import { readTransactionPage } from "@/lib/transactions.mjs";
+import { boundedReportRange } from "@/lib/reporting-range.mjs";
 import type {
   Application,
   ApplicationDetail,
@@ -84,7 +85,7 @@ export const adminApi = {
     signal: AbortSignal,
   ) =>
     paged<DashboardReview>(
-      `admin/dashboard/reviews?${params({ ...(from && to ? { from, to } : { all: "true" }), page, pageSize: 20, ...(rating ? { rating } : {}) })}`,
+      `admin/dashboard/reviews?${params({ ...boundedReportRange(from, to), page, pageSize: 20, ...(rating ? { rating } : {}) })}`,
       ["reviewId", "bookingId", "rating", "createdAt", "hasImage"],
       signal,
     ),
@@ -119,7 +120,7 @@ export const adminApi = {
   dashboard: async (from: string, to: string, signal: AbortSignal) =>
     validateDashboard(
       await request<DashboardData>(
-        `admin/dashboard?${params(from && to ? { from, to } : { all: "true" })}`,
+        `admin/dashboard?${params(boundedReportRange(from, to))}`,
         "GET",
         undefined,
         signal,
