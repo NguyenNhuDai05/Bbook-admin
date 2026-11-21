@@ -384,7 +384,7 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
                 <span className={s.icon}>
                   <ArrowLeftRight size={16} />
                 </span>
-                Tổng giao dịch thanh toán
+                Giao dịch thành công
               </div>
               <strong>{num(data.lifetime.successfulTransactions)}</strong>
               <span className={s.delta}>
