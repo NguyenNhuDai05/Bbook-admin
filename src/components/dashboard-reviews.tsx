@@ -5,6 +5,7 @@ import { useResource } from "@/lib/client";
 import { adminService } from "@/services/admin-service";
 import type { DashboardData, DashboardReviewDetail } from "@/lib/dashboard";
 import { money, shortId, statusLabels } from "@/lib/format";
+import { formatAverageRating } from "@/lib/dashboard-presentation.mjs";
 import { Modal, Pagination, DocumentView, State } from "./ui";
 import s from "./dashboard.module.css";
 
@@ -164,12 +165,7 @@ export function ServiceReviews({
       <div className={s.reviewSummary}>
         <div>
           <strong>
-            {reviews.averageRating === null
-              ? "—"
-              : reviews.averageRating.toLocaleString("vi-VN", {
-                  minimumFractionDigits: demoReviews ? 2 : 0,
-                  maximumFractionDigits: demoReviews ? 2 : 1,
-                })}
+            {formatAverageRating(reviews.averageRating)}
             <small> / 5</small>
           </strong>
           <span>{reviews.total.toLocaleString("vi-VN")} lượt đánh giá</span>

@@ -276,7 +276,7 @@ test("production dashboard retains real queries, labels, navigation and precisio
   );
   assert.match(html, /<h1>Tổng quan<\/h1>/);
   assert.match(html, /88 Customer/);
-  assert.match(html, /3,7 \/ 5/);
+  assert.match(html, /3,70 \/ 5/);
   assert.doesNotMatch(
     html,
     /DEMO|DỮ LIỆU MÔ PHỎNG|Paid Users|Chưa có dữ liệu so sánh/,

@@ -22,6 +22,7 @@ import {
   validRange,
   calendarRange,
   vietnamToday,
+  formatAverageRating,
 } from "@/lib/dashboard-presentation.mjs";
 import { reportPreset } from "@/lib/reporting-range.mjs";
 import { useWorkSummary, workModules } from "./work-summary";
@@ -319,7 +320,7 @@ export function OverviewDashboard() {
                 Điểm bình quân:{" "}
                 {data.lifetime.averageRating === null
                   ? "—"
-                  : `${data.lifetime.averageRating.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} / 5`}
+                  : `${formatAverageRating(data.lifetime.averageRating)} / 5`}
               </span>
             </section>
             <button

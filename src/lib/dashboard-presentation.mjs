@@ -1,3 +1,12 @@
+export function formatAverageRating(value) {
+  return value == null
+    ? "—"
+    : value.toLocaleString("vi-VN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+}
+
 export function vietnamToday(now = Date.now()) {
   return new Date(now + 7 * 3600000).toISOString().slice(0, 10);
 }

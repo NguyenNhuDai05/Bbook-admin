@@ -11,7 +11,10 @@ import {
 import { useResource, invalidateResources } from "@/lib/client";
 import { adminService } from "@/services/admin-service";
 import { money, shortId } from "@/lib/format";
-import { bookingLabels } from "@/lib/dashboard-presentation.mjs";
+import {
+  bookingLabels,
+  formatAverageRating,
+} from "@/lib/dashboard-presentation.mjs";
 import { reviewFilters, reviewHref } from "@/lib/reporting-range.mjs";
 import type { DashboardReviewDetail } from "@/lib/dashboard";
 import { ReportRangeFilter, RangeCaption } from "./report-range";
@@ -200,11 +203,7 @@ export function ReviewsPage({ id }: { id?: string }) {
         <div className={s.reviewMetric}>
           <span>Điểm trung bình</span>
           <strong>
-            {stats?.averageRating == null
-              ? "—"
-              : stats.averageRating.toLocaleString("vi-VN", {
-                  maximumFractionDigits: 2,
-                })}
+            {formatAverageRating(stats?.averageRating)}
             <small> / 5</small>
           </strong>
           <p>Chất lượng dịch vụ từ khách hàng</p>
