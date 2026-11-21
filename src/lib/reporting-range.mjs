@@ -14,6 +14,15 @@ export function reportPreset(preset, today = vietnamToday()) {
   return { preset, ...presetRange(preset, today) };
 }
 
+// Lifetime fields are included in a dated dashboard response. Both report
+// endpoints on the deployed backend require explicit dates, even for totals.
+export function boundedReportRange(from, to, today = vietnamToday()) {
+  if (!from && !to) return presetRange("month", today);
+  if (!validRange(from, to))
+    throw new Error("Chọn khoảng ngày hợp lệ, tối đa 366 ngày.");
+  return { from, to };
+}
+
 export function readReportRange(
   params,
   { defaultPreset = "month", allowAll = false, today = vietnamToday() } = {},
@@ -50,7 +59,7 @@ export function reviewFilters(params) {
   const rating = Number(params.get("rating") || 0);
   const page = Number(params.get("page") || 1);
   return {
-    range: readReportRange(params, { defaultPreset: "all", allowAll: true }),
+    range: readReportRange(params),
     rating: Number.isInteger(rating) && rating >= 1 && rating <= 5 ? rating : 0,
     page: Number.isInteger(page) && page >= 1 && page <= 100000 ? page : 1,
   };
