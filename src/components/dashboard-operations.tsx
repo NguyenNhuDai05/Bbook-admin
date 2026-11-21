@@ -27,6 +27,7 @@ import {
   validRange,
   calendarRange,
   vietnamToday,
+  formatAverageRating,
 } from "@/lib/dashboard-presentation.mjs";
 import { useWorkSummary, workModules } from "./work-summary";
 import { Pagination } from "./ui";
@@ -368,7 +369,7 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
                 Điểm bình quân:{" "}
                 {data.lifetime.averageRating === null
                   ? "—"
-                  : `${data.lifetime.averageRating.toLocaleString("vi-VN", { minimumFractionDigits: demo ? 2 : 0, maximumFractionDigits: demo ? 2 : 1 })} / 5`}
+                  : `${formatAverageRating(data.lifetime.averageRating)} / 5`}
               </span>
             </section>
             <button
@@ -570,7 +571,7 @@ export function OperationsDashboard({ demo = false }: { demo?: boolean } = {}) {
               <strong>
                 {data.serviceReviews.averageRating === null
                   ? "—"
-                  : `${data.serviceReviews.averageRating.toLocaleString("vi-VN", { minimumFractionDigits: demo ? 2 : 0, maximumFractionDigits: demo ? 2 : 1 })} / 5`}
+                  : `${formatAverageRating(data.serviceReviews.averageRating)} / 5`}
               </strong>
               <span className={s.delta}>
                 {data.serviceReviews.total
