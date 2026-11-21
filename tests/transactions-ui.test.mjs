@@ -8,6 +8,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as transactions from "../src/lib/transactions.mjs";
 import * as dates from "../src/lib/dashboard-presentation.mjs";
+import * as ranges from "../src/lib/reporting-range.mjs";
 
 const require = createRequire(import.meta.url);
 const compiled = ts.transpileModule(
@@ -72,6 +73,32 @@ function render(query = "scope=all", resource = {}, id, options = {}) {
     },
     "@/lib/transactions.mjs": transactions,
     "@/lib/dashboard-presentation.mjs": dates,
+    "@/lib/reporting-range.mjs": ranges,
+    "./report-range": {
+      ReportRangeFilter: ({ value, onChange }) =>
+        React.createElement(
+          "select",
+          {
+            "aria-label": "Khoảng thời gian",
+            value: value.preset,
+            onChange: (event) =>
+              onChange(ranges.reportPreset(event.target.value)),
+          },
+          ["all", "today", "week", "month", "quarter", "custom"].map((preset) =>
+            React.createElement(
+              "option",
+              { key: preset, value: preset },
+              preset,
+            ),
+          ),
+        ),
+      RangeCaption: ({ range }) =>
+        React.createElement(
+          "span",
+          null,
+          range.from ? `${range.from} – ${range.to}` : "Từ đầu đến nay",
+        ),
+    },
     "./dashboard-transactions": {
       TransactionDetail: () =>
         React.createElement("div", null, "Detail content"),
@@ -141,8 +168,9 @@ function find(tree, predicate) {
 test("transaction UI counts the entire result and paginates only the table", () => {
   const { html } = render("scope=all&page=2", { data: rows });
   assert.match(html, /<strong>23<\/strong>/);
-  assert.match(html, /<strong>20<\/strong>/);
   assert.match(html, /<strong>3<\/strong>/);
+  assert.equal((html.match(/class="metric"/g) || []).length, 3);
+  assert.doesNotMatch(html, /class="summary"[^]*aria-pressed/);
   assert.match(html, /2:3\/23/);
   assert.doesNotMatch(
     html,

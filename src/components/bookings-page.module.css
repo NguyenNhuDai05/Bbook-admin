@@ -10,7 +10,7 @@
 }
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 .metric {
@@ -19,7 +19,7 @@
   border-radius: 14px;
   padding: 19px 21px;
   display: grid;
-  gap: 11px;
+  gap: 8px;
 }
 .metric > span {
   color: #667085;
@@ -59,7 +59,7 @@
 }
 .toolbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: 12px;
   padding: 0 24px 20px;

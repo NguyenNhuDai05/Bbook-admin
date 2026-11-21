@@ -6,7 +6,6 @@ import { useState, type FormEvent } from "react";
 import {
   CalendarDays,
   CheckCircle2,
-  Clock3,
   ListFilter,
   RefreshCw,
   Search,
@@ -29,6 +28,7 @@ import {
 import { paymentLabels } from "@/lib/transactions.mjs";
 import { money, shortId } from "@/lib/format";
 import { Modal, PageTitle, Pagination, State, SubmitButton } from "./ui";
+import { ReportRangeFilter, RangeCaption } from "./report-range";
 import s from "./bookings-page.module.css";
 
 function Status({ value }: { value: string }) {
@@ -178,12 +178,12 @@ function BookingList() {
   }
   const selectedRange = all
     ? "all"
-    : params.get("range") === "custom"
-      ? "custom"
-      : ["month", "week"].find((key) => {
-          const range = presetRange(key);
-          return from === range.from && to === range.to;
-        }) || "custom";
+    : params.get("range") ||
+      ["month", "week"].find((key) => {
+        const range = presetRange(key);
+        return from === range.from && to === range.to;
+      }) ||
+      "custom";
   const linkParams = new URLSearchParams(params.toString());
   if (!all) {
     linkParams.set("from", from);
@@ -209,7 +209,6 @@ function BookingList() {
         {[
           ["Tổng booking", data?.summary.total, CalendarDays],
           ["Hoàn thành", data?.summary.completed, CheckCircle2],
-          ["Đang xử lý", data?.summary.active, Clock3],
           ["Đã hủy / Từ chối", data?.summary.cancelled, ListFilter],
         ].map(([label, count, Icon]) => {
           const MetricIcon = Icon as typeof CalendarDays;
@@ -233,7 +232,7 @@ function BookingList() {
           <h2>Danh sách booking</h2>
           <span className={s.muted}>
             {data
-              ? `${data.total.toLocaleString("vi-VN")} kết quả`
+              ? `${data.total.toLocaleString("vi-VN")} kết quả${data.summary.active ? ` · ${data.summary.active} đang xử lý` : ""}`
               : "Lịch hẹn và thông tin thanh toán"}
           </span>
         </div>
@@ -255,55 +254,23 @@ function BookingList() {
               </option>
             ))}
           </select>
-          <select
-            aria-label="Khoảng ngày booking"
-            value={selectedRange}
-            onChange={(e) => {
-              if (e.target.value === "all")
-                update({ scope: "all", range: "", from: "", to: "" });
-              else if (e.target.value === "custom")
-                update({
-                  scope: "",
-                  range: "custom",
-                  from: from || defaults.from,
-                  to: to || defaults.to,
-                });
-              else
-                update({
-                  scope: "",
-                  range: "",
-                  ...presetRange(e.target.value),
-                });
-            }}
-          >
-            <option value="month">30 ngày gần đây</option>
-            <option value="week">7 ngày gần đây</option>
-            <option value="all">Từ đầu đến nay</option>
-            <option value="custom">Tùy chọn ngày</option>
-          </select>
-          {!all && (
-            <div className={s.dates}>
-              <input
-                aria-label="Từ ngày"
-                type="date"
-                value={from}
-                onChange={(e) =>
-                  update({ range: "custom", from: e.target.value })
-                }
-              />
-              <span className={s.muted}>–</span>
-              <input
-                aria-label="Đến ngày"
-                type="date"
-                value={to}
-                onChange={(e) =>
-                  update({ range: "custom", to: e.target.value })
-                }
-              />
-            </div>
-          )}
+          <ReportRangeFilter
+            value={{ preset: selectedRange, from, to }}
+            allowAll
+            onChange={(next) =>
+              update({
+                scope: next.preset === "all" ? "all" : "",
+                range: next.preset,
+                from: next.from,
+                to: next.to,
+              })
+            }
+          />
         </div>
-        <p className={s.range}>Theo ngày tạo booking · Giờ Việt Nam</p>
+        <p className={s.range}>
+          Theo ngày tạo booking ·{" "}
+          <RangeCaption range={{ preset: selectedRange, from, to }} />
+        </p>
         {!valid ? (
           <State error="Chọn khoảng ngày hợp lệ, tối đa 366 ngày." />
         ) : resource.error ? (

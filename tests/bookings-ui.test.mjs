@@ -101,6 +101,16 @@ function render(query = "", options = {}) {
     "./bookings-page.module.css": {
       default: new Proxy({}, { get: (_, key) => key }),
     },
+    "./report-range": {
+      ReportRangeFilter: ({ value }) =>
+        React.createElement(
+          "select",
+          { "aria-label": "Khoảng thời gian", defaultValue: value.preset },
+          React.createElement("option", { value: value.preset }, value.preset),
+        ),
+      RangeCaption: ({ range }) =>
+        React.createElement("span", null, `${range.from} – ${range.to}`),
+    },
     "./ui": {
       PageTitle: (p) =>
         React.createElement("header", null, p.title, p.description, p.action),

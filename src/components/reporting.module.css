@@ -437,18 +437,11 @@
 .footnote {
   max-width: 900px;
 }
-.reviewOverview {
+.reviewPage .reviewOverview {
   display: grid;
-  grid-template-columns: minmax(170px, 0.9fr) minmax(200px, 1.2fr) minmax(
-      190px,
-      1fr
-    );
-  padding: 25px 28px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: white;
-  gap: 32px;
-  align-items: center;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
 }
 .reviewScore > span {
   font-weight: 550;
@@ -1052,5 +1045,112 @@
   }
   .metric {
     transition: none;
+  }
+}
+
+.reviewPage {
+  gap: 20px;
+  max-width: none;
+  margin: 0;
+}
+.reviewPage h1 {
+  font-size: 28px;
+}
+.reviewPage .pageHeader p {
+  font-size: 14px;
+  margin-top: 7px;
+}
+.reviewMetric {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 19px 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+.reviewMetric > span {
+  color: #667085;
+  font-size: 14px;
+}
+.reviewMetric > strong {
+  color: #182230;
+  font-size: 28px;
+  letter-spacing: -0.6px;
+  line-height: 1.25;
+  font-weight: 650;
+}
+.reviewMetric > strong small {
+  color: #98a2b3;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.reviewMetric > p {
+  margin: 0;
+  color: #7a8493;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.reviewBreakdown {
+  position: relative;
+}
+.reviewBreakdown > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #667085;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.reviewBreakdown > summary::-webkit-details-marker {
+  display: none;
+}
+.reviewBreakdown[open] > summary {
+  background: #f9fafb;
+}
+.reviewBreakdown .distribution {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: 260px;
+  padding: 15px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px #16213b12;
+}
+.reviewPage .reviewTablePanel {
+  overflow: visible;
+}
+.reviewPage .reviewToolbar {
+  padding: 20px 22px 16px;
+  flex-wrap: wrap;
+}
+.reviewPage .tableFilters {
+  gap: 10px;
+}
+@media (max-width: 600px) {
+  .reviewPage .reviewOverview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .reviewMetric {
+    padding: 15px;
+  }
+  .reviewMetric:first-child {
+    grid-column: 1 / -1;
+  }
+  .reviewBreakdown .distribution {
+    left: 0;
+    right: auto;
   }
 }
