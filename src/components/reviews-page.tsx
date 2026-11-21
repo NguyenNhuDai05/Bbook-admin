@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronRight,
   Image as ImageIcon,
-  MessageSquareText,
   RefreshCw,
   Star,
 } from "lucide-react";
@@ -182,10 +181,9 @@ export function ReviewsPage({ id }: { id?: string }) {
   const change = (patch: Partial<typeof filters>) =>
     router.replace(reviewHref({ ...filters, ...patch }), { scroll: false });
   return (
-    <div className={s.page}>
+    <div className={`${s.page} ${s.reviewPage}`}>
       <header className={s.pageHeader}>
         <div>
-          <div className={s.eyebrow}>QUẢN LÝ</div>
           <h1>Đánh giá</h1>
           <p>Lắng nghe khách hàng, theo dõi chất lượng dịch vụ.</p>
         </div>
@@ -199,65 +197,29 @@ export function ReviewsPage({ id }: { id?: string }) {
         </button>
       </header>
       <section className={s.reviewOverview} aria-label="Tổng quan đánh giá">
-        <div className={s.reviewScore}>
+        <div className={s.reviewMetric}>
           <span>Điểm trung bình</span>
-          <div>
-            <strong>
-              {stats?.averageRating == null
-                ? "—"
-                : stats.averageRating.toLocaleString("vi-VN", {
-                    maximumFractionDigits: 2,
-                  })}
-            </strong>
-            <span>/ 5</span>
-          </div>
-          {stats?.averageRating != null && (
-            <Stars rating={Math.round(stats.averageRating)} />
-          )}
-          <small>
-            {stats
-              ? `${stats.total.toLocaleString("vi-VN")} đánh giá trong khoảng ngày đã chọn`
-              : summary.error
-                ? "Chưa tải được số liệu"
-                : "Đang tải số liệu…"}
-          </small>
+          <strong>
+            {stats?.averageRating == null
+              ? "—"
+              : stats.averageRating.toLocaleString("vi-VN", {
+                  maximumFractionDigits: 2,
+                })}
+            <small> / 5</small>
+          </strong>
+          <p>Chất lượng dịch vụ từ khách hàng</p>
         </div>
-        <div className={s.distribution} aria-label="Phân bố số sao">
-          {[5, 4, 3, 2, 1].map((star) => {
-            const count = stats?.distribution.find(
-              (row) => row.rating === star,
-            )?.count;
-            return (
-              <button
-                key={star}
-                aria-pressed={rating === star}
-                aria-label={`Lọc ${star} sao${count == null ? "" : `: ${count} đánh giá`}`}
-                onClick={() =>
-                  change({ rating: rating === star ? 0 : star, page: 1 })
-                }
-              >
-                <span>
-                  {star}
-                  <Star size={12} />
-                </span>
-                <progress
-                  max={Math.max(1, stats?.total || 0)}
-                  value={count ?? 0}
-                  aria-hidden="true"
-                />
-                <b>{count ?? "—"}</b>
-              </button>
-            );
-          })}
+        <div className={s.reviewMetric}>
+          <span>Tổng đánh giá</span>
+          <strong>{stats ? stats.total.toLocaleString("vi-VN") : "—"}</strong>
+          <p>Trong khoảng ngày đang chọn</p>
         </div>
-        <div className={s.reviewInsight}>
-          <MessageSquareText size={20} />
-          <h2>Chất lượng dịch vụ</h2>
+        <div className={s.reviewMetric}>
+          <span>Đánh giá thấp</span>
           <strong>
             {stats ? stats.lowRatingCount.toLocaleString("vi-VN") : "—"}
           </strong>
-          <span>đánh giá từ 1–2 sao</span>
-          <p>Ưu tiên xem những trải nghiệm cần được cải thiện.</p>
+          <p>Những đánh giá từ 1–2 sao</p>
         </div>
       </section>
       {summary.error && (
@@ -302,6 +264,40 @@ export function ReviewsPage({ id }: { id?: string }) {
               value={range}
               onChange={(next) => change({ range: next, page: 1 })}
             />
+            <details className={s.reviewBreakdown}>
+              <summary>
+                Phân bố số sao
+                <ChevronDown size={14} />
+              </summary>
+              <div className={s.distribution} aria-label="Phân bố số sao">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = stats?.distribution.find(
+                    (row) => row.rating === star,
+                  )?.count;
+                  return (
+                    <button
+                      key={star}
+                      aria-pressed={rating === star}
+                      aria-label={`Lọc ${star} sao${count == null ? "" : `: ${count} đánh giá`}`}
+                      onClick={() =>
+                        change({ rating: rating === star ? 0 : star, page: 1 })
+                      }
+                    >
+                      <span>
+                        {star}
+                        <Star size={12} />
+                      </span>
+                      <progress
+                        max={Math.max(1, stats?.total || 0)}
+                        value={count ?? 0}
+                        aria-hidden="true"
+                      />
+                      <b>{count ?? "—"}</b>
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
           </div>
         </div>
         {reviews.error ? (
