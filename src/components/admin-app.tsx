@@ -22,6 +22,7 @@ import {
   WalletCards,
   Landmark,
   RotateCcw,
+  Star,
   X,
 } from "lucide-react";
 import { sessionService } from "@/services/session-service";
@@ -47,14 +48,13 @@ import { TransactionsPage, TransactionPage } from "./transactions-page";
 import { AdminContentLayout, isAdminListRoute } from "./admin-content-layout";
 import { SubscriptionPlans } from "./subscription-plans";
 import { MuaPromotions } from "./mua-promotions";
-import { Outcome3Page } from "@/features/outcome3/outcome3-page";
+import { ReviewsPage } from "./reviews-page";
 import referenceCss from "./admin-reference.module.css";
 const groups = [
   {
     label: "",
     items: [
       { key: "", label: "Tổng quan", icon: LayoutDashboard },
-      { key: "outcome-3", label: "Outcome 3", icon: LayoutDashboard },
       { key: "analytics", label: "Website Analytics", icon: Activity },
     ],
   },
@@ -66,6 +66,7 @@ const groups = [
       { key: "plans", label: "Gói & quyền lợi", icon: WalletCards },
       { key: "mua-promotions", label: "Quảng bá MUA", icon: Sparkles },
       { key: "bookings", label: "Booking", icon: CalendarDays },
+      { key: "reviews", label: "Đánh giá", icon: Star },
       { key: "complaints", label: "Khiếu nại", icon: MessageCircleWarning },
     ],
   },
@@ -153,7 +154,6 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
   }
   let page;
   if (key === "") page = <Dashboard {...props} />;
-  else if (key === "outcome-3" && !id) page = <Outcome3Page />;
   else if (key === "analytics" && !id) page = <WebsiteAnalytics />;
   else if (key === "verification" && id)
     page = <VerificationDetail {...props} id={id} />;
@@ -175,6 +175,7 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
   else if (key === "styles") page = <Styles />;
   else if (key === "users") page = <Directory />;
   else if (key === "bookings") page = <Bookings {...props} id={id} />;
+  else if (key === "reviews") page = <ReviewsPage id={id} />;
   else if (key === "complaints") page = <Complaints {...props} id={id} />;
   else if (key === "moderation") page = <Moderation {...props} id={id} />;
   else if (key === "activity" || key === "settings")
@@ -264,7 +265,9 @@ function AdminWorkspace({ route, user }: { route: string[]; user: AdminUser }) {
             {id && (
               <>
                 <ChevronRight size={13} />
-                <span>Chi tiết hồ sơ</span>
+                <span>
+                  {key === "reviews" ? "Chi tiết đánh giá" : "Chi tiết hồ sơ"}
+                </span>
               </>
             )}
           </div>

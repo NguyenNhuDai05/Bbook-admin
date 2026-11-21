@@ -21,5 +21,7 @@ export default async function AdminPage({
     throw error;
   }
   if (!session) redirect("/login");
-  return <AdminApp route={(await params).route || []} user={session.user} />;
+  const route = (await params).route || [];
+  if (route[0] === "outcome-3") redirect("/");
+  return <AdminApp route={route} user={session.user} />;
 }

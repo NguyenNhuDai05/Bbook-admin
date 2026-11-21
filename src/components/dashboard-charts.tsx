@@ -187,7 +187,9 @@ export function RevenueChart({
           <p>
             {demo
               ? "Phí booking hoàn thành + doanh thu gói · VND"
-              : "Phí nền tảng ghi nhận khi booking hoàn thành · VND"}
+              : data.revenueScope === "BookingAndPlans"
+                ? "Phí booking hoàn thành và tiền gói đã xác minh thu · VND"
+                : "Phí nền tảng ghi nhận khi booking hoàn thành · VND"}
           </p>
         </div>
       </div>
