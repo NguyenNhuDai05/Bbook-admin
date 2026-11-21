@@ -6,6 +6,7 @@ import ts from "typescript";
 import * as ranges from "../src/lib/reporting-range.mjs";
 import * as contracts from "../src/lib/contracts.mjs";
 import * as transactions from "../src/lib/transactions.mjs";
+import * as bookings from "../src/lib/bookings.mjs";
 import { fixture, reviewFixture } from "./fixtures/reporting-ui.mjs";
 
 test("dashboard lifetime totals and review lists are requested with dates accepted by the deployed API", async () => {
@@ -31,6 +32,7 @@ test("dashboard lifetime totals and review lists are requested with dates accept
     "@/lib/reporting-range.mjs": ranges,
     "@/lib/contracts.mjs": contracts,
     "@/lib/transactions.mjs": transactions,
+    "@/lib/bookings.mjs": bookings,
   };
   const compiledModule = { exports: {} };
   const code = ts.transpileModule(

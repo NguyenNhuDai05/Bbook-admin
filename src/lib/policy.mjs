@@ -36,6 +36,8 @@ const rules = [
   ["GET", /^admin\/dashboard\/transactions$/],
   ["GET", new RegExp(`^admin/dashboard/transactions/${guid}$`)],
   ["GET", new RegExp(`^admin/dashboard/reviews/${guid}$`)],
+  ["GET", /^admin\/dashboard\/bookings$/],
+  ["GET", new RegExp("^admin/dashboard/bookings/" + guid + "$")],
   ["GET", /^admin\/work-summary$/],
   ["GET", /^admin\/feedback$/],
   ["GET", new RegExp(`^admin/feedback/${guid}$`)],

@@ -108,7 +108,7 @@ export function TransactionsPage() {
                   <tr>
                     <th>Giao dịch / Đơn mua</th>
                     <th>Người thanh toán</th>
-                    <th>Mã đơn PayOS</th>
+                    <th>Mã đơn thanh toán</th>
                     <th>Số tiền</th>
                     <th>Thu tiền</th>
                     <th>Trạng thái</th>
