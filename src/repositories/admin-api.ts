@@ -1,6 +1,10 @@
+import { readBookingPage } from "@/lib/bookings.mjs";
 import { request } from "@/lib/client";
 import {
   validateDashboard,
+  type DashboardBooking,
+  type DashboardBookingPage,
+  type DashboardBookingDetail,
   type DashboardData,
   type DashboardReview,
   type DashboardReviewDetail,
@@ -51,6 +55,37 @@ async function paged<T>(
   ) as Paged<T>;
 }
 export const adminApi = {
+  bookings: (
+    from: string,
+    to: string,
+    status: string,
+    search: string,
+    page: number,
+    signal: AbortSignal,
+  ) =>
+    paged<DashboardBooking>(
+      `admin/dashboard/bookings?${params({ page, pageSize: 20, ...(from && to ? { from, to } : {}), ...(status ? { status } : {}), ...(search ? { search } : {}) })}`,
+      [
+        "bookingId",
+        "status",
+        "paymentStatus",
+        "createdAt",
+        "bookingDate",
+        "startTime",
+        "endTime",
+        "totalAmount",
+        "depositAmount",
+        "serviceNames",
+      ],
+      signal,
+    ).then((value) => readBookingPage(value) as DashboardBookingPage),
+  booking: (id: string, signal: AbortSignal) =>
+    request<DashboardBookingDetail>(
+      `admin/dashboard/bookings/${id}`,
+      "GET",
+      undefined,
+      signal,
+    ),
   dashboardTransactions: (
     from: string,
     to: string,

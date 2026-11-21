@@ -242,3 +242,65 @@ export interface DashboardTransactionDetail extends DashboardTransaction {
     completedAt: string | null;
   }[];
 }
+
+export interface DashboardBooking {
+  bookingId: string;
+  customerId: string;
+  muaId: string;
+  customerName: string | null;
+  muaName: string | null;
+  serviceNames: string[];
+  createdAt: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  paymentStatus: string;
+  totalAmount: number;
+  depositAmount: number;
+}
+export interface DashboardBookingPage {
+  items: DashboardBooking[];
+  total: number;
+  page: number;
+  pageSize: number;
+  summary: {
+    total: number;
+    completed: number;
+    active: number;
+    cancelled: number;
+  };
+}
+export interface DashboardBookingDetail extends Omit<
+  DashboardBooking,
+  "serviceNames"
+> {
+  updatedAt: string;
+  completedAt: string | null;
+  remainingAmount: number;
+  platformFeeAmount: number;
+  totalDurationMinutes: number;
+  address: string | null;
+  cancellationReason: string | null;
+  disputeReason: string | null;
+  services: {
+    serviceName: string;
+    participantsCount: number;
+    priceSnapshot: number;
+    durationMinutesSnapshot: number;
+  }[];
+  payments: {
+    paymentId: string;
+    amount: number;
+    status: string;
+    paidAt: string | null;
+    createdAt: string;
+  }[];
+  timeline: { status: string; occurredAt: string }[];
+  review: {
+    reviewId: string;
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+  } | null;
+}

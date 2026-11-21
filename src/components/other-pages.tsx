@@ -1,4 +1,5 @@
 "use client";
+import { BookingsPage } from "./bookings-page";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LockKeyhole, Plus, Search, Send, X } from "lucide-react";
@@ -583,101 +584,5 @@ export function PlannedPage({ kind }: { kind: string }) {
   );
 }
 export function Bookings({ id }: PageProps & { id?: string }) {
-  const submission = useSubmission();
-  const { busy } = submission;
-  const [confirm, setConfirm] = useState(false),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
-  async function completeOverdue() {
-    if (!submission.begin()) return;
-    setError("");
-    setNotice("");
-    try {
-      const result = await service.autoComplete();
-      setNotice(
-        `Backend đã xử lý ${result.completedBookings} booking quá hạn.`,
-      );
-      setConfirm(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể xử lý.");
-    } finally {
-      submission.end();
-    }
-  }
-  return (
-    <>
-      <PageTitle
-        title={id ? "Chi tiết Booking" : "Booking"}
-        description="Quản lý đơn đặt lịch và tranh chấp"
-      />
-      <section className="panel">
-        <State empty="Danh sách booking đang được hoàn thiện." />
-      </section>
-      <button
-        className="button secondary"
-        disabled
-        title="Cần dữ liệu booking tranh chấp thực tế trước khi quyết định"
-      >
-        Giải quyết tranh chấp
-      </button>
-      {!id && (
-        <section className="panel tab-content">
-          <h2>Xử lý booking quá hạn</h2>
-          <p>
-            Thực hiện tác vụ hoàn tất các booking đủ điều kiện theo quy tắc
-            Backend. Đây là thao tác toàn hệ thống.
-          </p>
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={() => {
-              setError("");
-              setNotice("");
-              setConfirm(true);
-            }}
-          >
-            Xử lý booking quá hạn
-          </button>
-        </section>
-      )}
-      {notice && (
-        <p className="notice success" role="status">
-          {notice}
-        </p>
-      )}
-      {confirm && (
-        <Modal
-          title="Xử lý booking quá hạn?"
-          onClose={() => {
-            if (!busy) setConfirm(false);
-          }}
-          footer={
-            <>
-              <button
-                className="button secondary"
-                disabled={busy}
-                onClick={() => setConfirm(false)}
-              >
-                Hủy
-              </button>
-              <SubmitButton busy={busy} onClick={completeOverdue}>
-                Xác nhận xử lý
-              </SubmitButton>
-            </>
-          }
-        >
-          <p>
-            Backend sẽ tự kiểm tra điều kiện và hoàn tất các booking quá hạn hợp
-            lệ. Không thể xem trước danh sách bị ảnh hưởng vì chưa có API Admin
-            hỗ trợ.
-          </p>
-          {error && (
-            <p className="inline-error" role="alert">
-              {error}
-            </p>
-          )}
-        </Modal>
-      )}
-    </>
-  );
+  return <BookingsPage id={id} />;
 }

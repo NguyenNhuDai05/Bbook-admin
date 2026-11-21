@@ -32,6 +32,25 @@ async function mutateStyle<T>(action: () => Promise<T>, prefixes: string[]) {
   return result;
 }
 export const adminService = {
+  bookings: (
+    from: string,
+    to: string,
+    status: string,
+    search: string,
+    page: number,
+    enabled = true,
+  ) =>
+    query(
+      `admin:dashboard:bookings:${JSON.stringify([from, to, status, search, page])}`,
+      (signal) => api.bookings(from, to, status, search, page, signal),
+      enabled,
+    ),
+  booking: (id: string) =>
+    query(
+      `admin:dashboard:booking:${id}`,
+      (signal) => api.booking(id, signal),
+      !!id,
+    ),
   transactions: (from: string, to: string, enabled = true) =>
     query(
       `admin:dashboard:transactions:complete:${from}:${to}`,

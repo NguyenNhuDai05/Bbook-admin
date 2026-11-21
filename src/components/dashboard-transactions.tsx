@@ -46,12 +46,12 @@ export function TransactionDetail({
           <strong className={s.transactionAmount}>{money(item.amount)}</strong>
           <p>
             {transactionLabel(item)} ·{" "}
-            {paymentLabels[item.status] || item.status} · {item.provider}
+            {paymentLabels[item.status] || item.status}
           </p>
           <dl>
             <dt>Mã giao dịch</dt>
             <dd>{item.paymentId}</dd>
-            <dt>Mã đơn PayOS</dt>
+            <dt>Mã đơn thanh toán</dt>
             <dd>{item.providerOrderCode || "—"}</dd>
             <dt>Mã đối soát</dt>
             <dd>{item.providerReference || "—"}</dd>
@@ -119,7 +119,7 @@ export function TransactionDetail({
                     ? "Ứng dụng BBook"
                     : item.origin === "IndependentWebsite"
                       ? "Website BBook"
-                      : item.origin || "—"}
+                      : "—"}
                 </dd>
                 <dt>Tính trong doanh thu gói</dt>
                 <dd>
@@ -237,7 +237,7 @@ export function TransactionHistory({
         </div>
         <p className={s.footnote}>
           {scope === "all"
-            ? "Toàn bộ thanh toán PayOS đã thu tiền"
+            ? "Toàn bộ giao dịch đã ghi nhận thanh toán"
             : `${from.split("-").reverse().join("/")} – ${to.split("-").reverse().join("/")}`}{" "}
           · Theo thời điểm thu tiền, giờ Việt Nam. Khoản đã hoàn tiền vẫn xuất
           hiện trong lịch sử.
